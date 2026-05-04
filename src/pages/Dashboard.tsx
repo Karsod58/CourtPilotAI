@@ -1,0 +1,219 @@
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileText,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
+import {
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import { useNavigate } from "react-router-dom";
+import "./Dashboard.css";
+import AppLayout from "../components/layout/AppLayout";
+import { dataService } from "../services/dataService";
+
+const dashboardData = dataService.getDashboardStats();
+const statusData = dashboardData.statusDistribution;
+const departmentData = [
+  { name: "Legal Dept.", value: 29 },
+  { name: "Finance Dept.", value: 25 },
+  { name: "PWD", value: 18 },
+];
+const colors = ["#ff7a18", "#1f6feb", "#36c994", "#2bc7d3", "#7c3aed"];
+
+const casesData = dataService.getCasesData();
+const deadlines = casesData
+  .filter(case_ => case_.status === 'In Progress' || case_.status === 'Pending Verification')
+  .slice(0, 3)
+  .map(case_ => ({
+    id: case_.id,
+    title: case_.title,
+    department: case_.department,
+    deadline: new Date(case_.deadline).toLocaleDateString('en-IN', { 
+      day: 'numeric', 
+      month: 'short', 
+    }),
+    daysLeft: Math.ceil((new Date(case_.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + " days",
+    priority: case_.priority,
+  }));
+
+const Dashboard = () => {
+  const navigate = useNavigate();
+
+  const handleViewAllDeadlines = () => {
+    navigate('/deadlines');
+  };
+
+  return (
+    <AppLayout activeSidebarItem="dashboard" pageTitle="Overview">
+
+          <div className="summary-grid">
+            <div className="metric-card">
+              <p>Total Cases</p>
+              <h2>1,248</h2>
+              <span className="blue-text">All time</span>
+              <div className="metric-icon blue">
+                <FileText size={18} />
+              </div>
+            </div>
+
+            <div className="metric-card">
+              <p>Pending Actions</p>
+              <h2>324</h2>
+              <span className="orange-text">Needs attention</span>
+              <div className="metric-icon orange">
+                <AlertCircle size={18} />
+              </div>
+            </div>
+
+            <div className="metric-card">
+              <p>Urgent</p>
+              <h2>58</h2>
+              <span className="red-text">High priority</span>
+              <div className="metric-icon red">
+                <AlertCircle size={18} />
+              </div>
+            </div>
+
+            <div className="metric-card">
+              <p>Completed</p>
+              <h2>866</h2>
+              <span className="green-text">Successfully closed</span>
+              <div className="metric-icon green">
+                <CheckCircle2 size={18} />
+              </div>
+            </div>
+          </div>
+
+          <div className="charts-grid">
+            <div className="chart-card">
+              <h3>Cases by Status</h3>
+              <div className="chart-row">
+                <ResponsiveContainer width={150} height={150}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      innerRadius={45}
+                      outerRadius={65}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {statusData.map((_, index) => (
+                        <Cell key={index} fill={colors[index]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                <div className="legend">
+                  <p>
+                    <span style={{ background: "#ff7a18" }} />
+                    Pending <b>324 (26%)</b>
+                  </p>
+                  <p>
+                    <span style={{ background: "#1f6feb" }} />
+                    In Progress <b>258 (21%)</b>
+                  </p>
+                  <p>
+                    <span style={{ background: "#36c994" }} />
+                    Completed <b>866 (53%)</b>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <h3>Cases by Department</h3>
+              <div className="chart-row">
+                <ResponsiveContainer width={150} height={150}>
+                  <PieChart>
+                    <Pie
+                      data={departmentData}
+                      innerRadius={45}
+                      outerRadius={65}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {departmentData.map((_, index) => (
+                        <Cell key={index} fill={colors[index]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                <div className="legend">
+                  {departmentData.map((item, index) => (
+                    <p key={item.name}>
+                      <span style={{ background: colors[index] }} />
+                      {item.name} <b>{item.value}%</b>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="deadline-card">
+            <div className="deadline-header">
+              <h3>Upcoming Deadlines</h3>
+              <button onClick={handleViewAllDeadlines}>View All</button>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Case ID</th>
+                  <th>Title</th>
+                  <th>Department</th>
+                  <th>Deadline</th>
+                  <th>Days Left</th>
+                  <th>Priority</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {deadlines.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.title}</td>
+                    <td>{item.department}</td>
+                    <td>{item.deadline}</td>
+                    <td
+                      className={
+                        item.priority === "High"
+                          ? "red-text"
+                          : item.priority === "Medium"
+                          ? "orange-text"
+                          : "green-text"
+                      }
+                    >
+                      {item.daysLeft}
+                    </td>
+                    <td
+                      className={
+                        item.priority === "High"
+                          ? "red-text"
+                          : item.priority === "Medium"
+                          ? "orange-text"
+                          : "green-text"
+                      }
+                    >
+                      {item.priority}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+    </AppLayout>
+  );
+};
+
+export default Dashboard;
