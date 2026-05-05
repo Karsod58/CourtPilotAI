@@ -1,0 +1,59 @@
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# Database
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+aiosqlite==0.19.0
+alembic==1.13.1
+
+# Data Validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.2
+
+# AI/LLM
+openai==1.10.0
+anthropic==0.8.1
+sentence-transformers==2.3.1
+transformers==4.37.0
+torch==2.1.2
+
+# Vector Store
+faiss-cpu==1.7.4
+chromadb==0.4.22
+
+# Document Processing
+pypdf==4.0.1
+PyPDF2==3.0.1
+pytesseract==0.3.10
+Pillow==10.2.0
+pdf2image==1.17.0
+
+# Utilities
+python-dotenv==1.0.0
+loguru==0.7.2
+aiofiles==23.2.1
+httpx==0.26.0
+requests==2.31.0
+
+# Data Processing
+numpy==1.26.3
+pandas==2.2.0
+
+# Background Tasks (Optional)
+celery==5.3.6
+redis==5.0.1
+
+# Development
+pytest==7.4.4
+pytest-asyncio==0.23.3
+black==24.1.1
+flake8==7.0.0
+mypy==1.8.0

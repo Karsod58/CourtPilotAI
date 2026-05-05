@@ -1,0 +1,124 @@
+"""
+Application configuration management
+"""
+from pydantic_settings import BaseSettings
+from typing import List
+import os
+from urllib.parse import quote_plus
+
+
+class Settings(BaseSettings):
+    """Application settings"""
+    
+    # Application
+    APP_NAME: str = "CourtPilot"
+    APP_VERSION: str = "1.0.0"
+    DEBUG: bool = True
+    ENVIRONMENT: str = "development"
+    
+    # Server
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+    
+    # Database - MySQL
+    MYSQL_HOST: str = "localhost"
+    MYSQL_PORT: int = 3306
+    MYSQL_DB: str = "courtpilot"
+    MYSQL_USER: str = "root"
+    MYSQL_PASSWORD: str = ""
+    USE_SQLITE: bool = False  # Use MySQL instead of SQLite
+    
+    @property
+    def DATABASE_URL(self) -> str:
+        if self.USE_SQLITE:
+            return "sqlite+aiosqlite:///./courtpilot.db"
+        # MySQL async connection - URL encode password to handle special characters
+        encoded_password = quote_plus(self.MYSQL_PASSWORD)
+        return f"mysql+aiomysql://{self.MYSQL_USER}:{encoded_password}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}"
+    
+    # Database - MongoDB
+    MONGODB_URL: str = "mongodb://localhost:27017"
+    MONGODB_DB: str = "courtpilot"
+    
+    # Redis
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str = ""
+    
+    @property
+    def REDIS_URL(self) -> str:
+        if self.REDIS_PASSWORD:
+            return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+    
+    # AI/LLM Configuration
+    OPENAI_API_KEY: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    OLLAMA_BASE_URL: str = "https://ollama.com"
+    OLLAMA_API_KEY: str = ""
+    OLLAMA_MODEL: str = "llama3.1:8b"
+    LLM_PROVIDER: str = "ollama"  # openai, anthropic, or ollama
+    LLM_MODEL: str = "llama3.1:8b"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    
+    # Vector Store
+    VECTOR_STORE_TYPE: str = "faiss"
+    VECTOR_STORE_PATH: str = "./data/vector_store"
+    
+    # OCR Configuration
+    TESSERACT_PATH: str = "/usr/bin/tesseract"
+    OCR_LANGUAGE: str = "eng+hin"
+    
+    # Document Storage
+    DOCUMENT_STORAGE_PATH: str = "./data/documents"
+    MAX_UPLOAD_SIZE: int = 52428800  # 50MB
+    
+    # Security
+    SECRET_KEY: str = "your_secret_key_here_change_in_production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # CORS
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    LOG_FILE: str = "./logs/courtpilot.log"
+    
+    # Celery
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    
+    # AI Processing
+    CONFIDENCE_THRESHOLD: float = 0.7
+    LOW_CONFIDENCE_THRESHOLD: float = 0.5
+    BATCH_SIZE: int = 10
+    
+    # Alert Configuration
+    ALERT_EMAIL_ENABLED: bool = False
+    ALERT_SMS_ENABLED: bool = False
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    
+    # Department Mapping
+    DEPARTMENT_MAPPING_FILE: str = "./data/department_mapping.json"
+    
+    # Legal Intelligence
+    SIMILAR_CASE_THRESHOLD: float = 0.8
+    APPEAL_RECOMMENDATION_THRESHOLD: float = 0.6
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+# Create settings instance
+settings = Settings()
+
+# Create necessary directories
+os.makedirs(settings.DOCUMENT_STORAGE_PATH, exist_ok=True)
+os.makedirs(settings.VECTOR_STORE_PATH, exist_ok=True)
+os.makedirs(os.path.dirname(settings.LOG_FILE), exist_ok=True)

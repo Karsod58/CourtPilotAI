@@ -1,0 +1,165 @@
+{
+  "departments": [
+    {
+      "id": "finance",
+      "name": "Finance Department",
+      "description": "Handles financial matters, budgets, compensation, monetary relief, pensions, salaries, grants, subsidies",
+      "keywords": ["finance", "money", "payment", "compensation", "pension", "salary", "budget", "fund", "grant", "subsidy", "rupees", "amount"],
+      "contact": {
+        "email": "finance@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "pwd",
+      "name": "Public Works Department",
+      "description": "Infrastructure, construction, roads, buildings, public facilities, maintenance, repairs",
+      "keywords": ["construction", "building", "road", "infrastructure", "repair", "maintenance", "public works", "facility", "structure"],
+      "contact": {
+        "email": "pwd@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "health",
+      "name": "Health Department",
+      "description": "Healthcare, hospitals, medical facilities, public health, medical services, treatment",
+      "keywords": ["health", "hospital", "medical", "doctor", "treatment", "healthcare", "clinic", "medicine", "patient", "disease"],
+      "contact": {
+        "email": "health@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "education",
+      "name": "Education Department",
+      "description": "Schools, universities, educational institutions, academic matters, teachers, students",
+      "keywords": ["education", "school", "university", "college", "student", "teacher", "academic", "learning", "examination"],
+      "contact": {
+        "email": "education@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "home",
+      "name": "Home Department",
+      "description": "Law and order, police, internal security, prisons, crime, investigation",
+      "keywords": ["police", "security", "crime", "investigation", "prison", "law and order", "arrest", "custody"],
+      "contact": {
+        "email": "home@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "environment",
+      "name": "Environment Department",
+      "description": "Environmental protection, pollution control, forests, wildlife, conservation, ecology",
+      "keywords": ["environment", "pollution", "forest", "wildlife", "conservation", "ecology", "green", "nature", "tree"],
+      "contact": {
+        "email": "environment@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "transport",
+      "name": "Transport Department",
+      "description": "Transportation, vehicles, traffic, public transport, licensing, road safety",
+      "keywords": ["transport", "vehicle", "traffic", "bus", "taxi", "license", "driving", "road safety"],
+      "contact": {
+        "email": "transport@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "urban",
+      "name": "Urban Development Department",
+      "description": "Urban planning, municipal matters, city development, civic amenities",
+      "keywords": ["urban", "municipal", "city", "town", "civic", "planning", "development"],
+      "contact": {
+        "email": "urban@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "rural",
+      "name": "Rural Development Department",
+      "description": "Rural areas, villages, agricultural infrastructure, rural welfare",
+      "keywords": ["rural", "village", "agriculture", "farming", "panchayat", "gram"],
+      "contact": {
+        "email": "rural@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "law",
+      "name": "Law Department",
+      "description": "Legal matters, legislation, legal advice, appeals, court matters",
+      "keywords": ["law", "legal", "legislation", "appeal", "court", "advocate", "lawyer"],
+      "contact": {
+        "email": "law@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "social_welfare",
+      "name": "Social Welfare Department",
+      "description": "Social welfare, welfare schemes, vulnerable groups, disability, elderly care",
+      "keywords": ["welfare", "social", "disability", "elderly", "pension", "scheme", "vulnerable"],
+      "contact": {
+        "email": "welfare@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "labour",
+      "name": "Labour Department",
+      "description": "Labour matters, employment, workers rights, industrial relations",
+      "keywords": ["labour", "worker", "employment", "job", "wage", "industrial", "union"],
+      "contact": {
+        "email": "labour@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "revenue",
+      "name": "Revenue Department",
+      "description": "Land revenue, property matters, land records, taxation",
+      "keywords": ["revenue", "land", "property", "tax", "record", "ownership"],
+      "contact": {
+        "email": "revenue@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "water",
+      "name": "Water Resources Department",
+      "description": "Water supply, irrigation, water management, dams, canals",
+      "keywords": ["water", "irrigation", "dam", "canal", "supply", "reservoir"],
+      "contact": {
+        "email": "water@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    },
+    {
+      "id": "power",
+      "name": "Power Department",
+      "description": "Electricity, power supply, energy, electrical infrastructure",
+      "keywords": ["power", "electricity", "energy", "electrical", "supply", "grid"],
+      "contact": {
+        "email": "power@gov.in",
+        "phone": "+91-XXX-XXXXXXX"
+      }
+    }
+  ],
+  "assignment_rules": {
+    "default_confidence_threshold": 0.7,
+    "multi_department_threshold": 0.6,
+    "fallback_department": "law"
+  },
+  "priority_mapping": {
+    "immediate": ["critical", "urgent", "forthwith", "immediately"],
+    "high": ["within 7 days", "within one week", "expedite"],
+    "medium": ["within 30 days", "within one month"],
+    "low": ["periodic", "annual", "quarterly"]
+  }
+}
