@@ -17,8 +17,21 @@ except ImportError:
     MONGODB_AVAILABLE = False
     AsyncIOMotorClient = None
 
-# PostgreSQL/SQLite Setup
+# PostgreSQL/SQLite/MySQL Setup
 ASYNC_DATABASE_URL = settings.DATABASE_URL
+
+# Debug: Print the database URL (without password)
+import re
+safe_url = re.sub(r'://([^:]+):([^@]+)@', r'://\1:****@', ASYNC_DATABASE_URL)
+logger.info(f"Database URL: {safe_url}")
+
+# Ensure URL has correct driver
+if ASYNC_DATABASE_URL.startswith("mysql://"):
+    ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("mysql://", "mysql+aiomysql://", 1)
+    logger.info("Converted mysql:// to mysql+aiomysql://")
+elif ASYNC_DATABASE_URL.startswith("postgres://"):
+    ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+    logger.info("Converted postgres:// to postgresql+asyncpg://")
 
 engine = create_async_engine(
     ASYNC_DATABASE_URL,
