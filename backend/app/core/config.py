@@ -42,10 +42,16 @@ class Settings(BaseSettings):
     def DATABASE_URL(self) -> str:
         # If DATABASE_URL is provided directly (from Render/Railway), use it
         if self.DATABASE_URL_OVERRIDE:
-            # Convert postgres:// to postgresql+asyncpg://
             url = self.DATABASE_URL_OVERRIDE
+            
+            # Convert postgres:// to postgresql+asyncpg://
             if url.startswith("postgres://"):
                 url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+            
+            # Convert mysql:// to mysql+aiomysql://
+            elif url.startswith("mysql://"):
+                url = url.replace("mysql://", "mysql+aiomysql://", 1)
+            
             return url
             
         if self.USE_SQLITE:
