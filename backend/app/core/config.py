@@ -110,15 +110,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
-    
-    def get_cors_origins(self) -> List[str]:
-        """Parse CORS origins from comma-separated string"""
-        if isinstance(self.CORS_ORIGINS, str):
-            # Split by comma and strip whitespace
-            origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
-            return [origin for origin in origins if origin]
-        return self.CORS_ORIGINS if isinstance(self.CORS_ORIGINS, list) else []
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
     
     # Logging
     LOG_LEVEL: str = "INFO"
