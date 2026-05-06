@@ -10,21 +10,24 @@ AI-powered system to convert court judgments into verified, trackable action pla
 
 ### Backend Setup
 ```bash
-# 1. Install dependencies
+# 1. Navigate to backend
+cd backend
+
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 2. Setup environment
+# 3. Setup environment
 cp .env.example .env
 # Edit .env with your API keys and database credentials
 
-# 3. Start backend server
+# 4. Start backend server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend Setup
 ```bash
 # 1. Navigate to frontend
-cd CourtPilotAI
+cd frontend
 
 # 2. Install dependencies
 npm install
@@ -120,32 +123,21 @@ Assign Departments → Human Verify → Action Plans → Track Compliance
 
 ## 🚢 Deployment
 
-### Deploy to Vercel (Frontend)
+**See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide.**
 
-1. **Install Vercel CLI**
-```bash
-npm install -g vercel
-```
+### Quick Deploy
 
-2. **Deploy**
+**Frontend (Vercel):**
 ```bash
+cd frontend
 vercel
 ```
 
-3. **Set Environment Variables** in Vercel Dashboard:
-   - `VITE_API_URL`: Your backend API URL
-
-### Deploy Backend
-
-**Recommended platforms:**
-- **Railway**: https://railway.app (easiest)
-- **Render**: https://render.com (free tier available)
-- **AWS Lambda**: For serverless deployment
-- **DigitalOcean**: For VPS deployment
-
-**Environment variables needed:**
-- All variables from `.env.example`
-- Set `DEBUG=False` for production
-- Configure production database URL
+**Backend (Railway):**
+1. Go to https://railway.app
+2. Deploy from GitHub
+3. Select `backend/` folder
+4. Set environment variables
+5. Deploy
 
 ---

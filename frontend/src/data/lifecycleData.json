@@ -1,0 +1,80 @@
+{
+  "lifecycleSteps": [
+    {
+      "label": "Extracted",
+      "date": "10 Apr 2024",
+      "time": "11:25 AM",
+      "status": "completed",
+      "iconType": "check",
+      "description": "Document extracted from court database",
+      "details": ["ID: JD-2024-0410", "High Court", "45 pages"]
+    },
+    {
+      "label": "Verified",
+      "date": "10 Apr 2024",
+      "time": "12:05 PM",
+      "status": "completed",
+      "iconType": "check",
+      "description": "Details verified for accuracy",
+      "details": ["By: Anita Sharma", "99.8% accuracy", "Manual review"]
+    },
+    {
+      "label": "Assigned",
+      "date": "10 Apr 2024",
+      "time": "12:30 PM",
+      "status": "completed",
+      "iconType": "check",
+      "description": "Assigned to Finance Department",
+      "details": ["Team: Ramesh Verma", "High priority", "5 days"]
+    },
+    {
+      "label": "In Progress",
+      "date": "12 Apr 2024",
+      "time": "09:15 AM",
+      "status": "active",
+      "iconType": "lock",
+      "description": "Finance team processing case",
+      "details": ["60% complete", "Financial analysis", "Under review"]
+    },
+    {
+      "label": "Completed",
+      "date": "-",
+      "time": "",
+      "status": "pending",
+      "iconType": "fileCheck",
+      "description": "Final processing and closure",
+      "details": ["Financial processing", "Documentation", "2 days"]
+    },
+    {
+      "label": "Escalated",
+      "date": "-",
+      "time": "",
+      "status": "pending",
+      "iconType": "landmark",
+      "description": "Senior management review if needed",
+      "details": ["Complex issues", "Legal counsel", "As needed"]
+    }
+  ],
+  "activityLogs": [
+    {
+      "date": "12 Apr 2024, 09:15 AM",
+      "text": "Action marked as 'In Progress' by Finance Department",
+      "user": "Ramesh Verma"
+    },
+    {
+      "date": "10 Apr 2024, 12:30 PM",
+      "text": "Action assigned to Finance Department",
+      "user": "Anita Sharma"
+    },
+    {
+      "date": "10 Apr 2024, 12:05 PM",
+      "text": "Action plan verified and approved",
+      "user": "Anita Sharma"
+    },
+    {
+      "date": "10 Apr 2024, 11:25 AM",
+      "text": "Judgment extracted successfully",
+      "user": "System"
+    }
+  ]
+}

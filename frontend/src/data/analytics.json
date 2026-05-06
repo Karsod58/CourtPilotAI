@@ -1,0 +1,59 @@
+{
+  "overview": {
+    "totalCases": 156,
+    "completedCases": 89,
+    "pendingCases": 45,
+    "overdueCases": 22,
+    "averageCompliance": 76.5,
+    "monthlyGrowth": 12.3
+  },
+  "trends": {
+    "monthly": [
+      { "month": "Jan", "cases": 12, "completed": 8, "pending": 4 },
+      { "month": "Feb", "cases": 18, "completed": 12, "pending": 6 },
+      { "month": "Mar", "cases": 24, "completed": 16, "pending": 8 },
+      { "month": "Apr", "cases": 20, "completed": 14, "pending": 6 },
+      { "month": "May", "cases": 28, "completed": 19, "pending": 9 },
+      { "month": "Jun", "cases": 32, "completed": 20, "pending": 12 }
+    ],
+    "weekly": [
+      { "week": "W1", "cases": 8, "completed": 5 },
+      { "week": "W2", "cases": 12, "completed": 8 },
+      { "week": "W3", "cases": 10, "completed": 7 },
+      { "week": "W4", "cases": 15, "completed": 11 }
+    ]
+  },
+  "departmentPerformance": [
+    { "department": "Legal", "cases": 28, "avgScore": 82.5, "completion": 89 },
+    { "department": "Finance", "cases": 35, "avgScore": 78.2, "completion": 85 },
+    { "department": "PWD", "cases": 42, "avgScore": 71.8, "completion": 78 },
+    { "department": "Health", "cases": 31, "avgScore": 76.3, "completion": 82 },
+    { "department": "Education", "cases": 20, "avgScore": 85.7, "completion": 92 }
+  ],
+  "riskAnalysis": [
+    { "category": "Contract Compliance", "high": 8, "medium": 15, "low": 25 },
+    { "category": "Documentation", "high": 5, "medium": 12, "low": 30 },
+    { "category": "Timeline", "high": 12, "medium": 18, "low": 20 },
+    { "category": "Budget", "high": 3, "medium": 8, "low": 35 }
+  ],
+  "statusDistribution": [
+    { "name": "Completed", "value": 89, "color": "#10b981" },
+    { "name": "In Progress", "value": 34, "color": "#3b82f6" },
+    { "name": "Pending", "value": 23, "color": "#f59e0b" },
+    { "name": "Overdue", "value": 10, "color": "#ef4444" }
+  ],
+  "priorityDistribution": [
+    { "name": "Critical", "value": 12, "color": "#dc2626" },
+    { "name": "High", "value": 28, "color": "#ea580c" },
+    { "name": "Medium", "value": 45, "color": "#ca8a04" },
+    { "name": "Low", "value": 71, "color": "#059669" }
+  ],
+  "complianceTrends": [
+    { "month": "Jan", "score": 72.3 },
+    { "month": "Feb", "score": 74.1 },
+    { "month": "Mar", "score": 75.8 },
+    { "month": "Apr", "score": 77.2 },
+    { "month": "May", "score": 76.9 },
+    { "month": "Jun", "score": 78.4 }
+  ]
+}

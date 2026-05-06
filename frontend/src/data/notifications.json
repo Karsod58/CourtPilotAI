@@ -1,0 +1,82 @@
+[
+  {
+    "id": "NOTIF-001",
+    "title": "System Update Available",
+    "message": "A new system update is available with enhanced features and security improvements.",
+    "type": "info",
+    "priority": "low",
+    "timestamp": "2024-06-12T08:00:00Z",
+    "read": false,
+    "category": "system"
+  },
+  {
+    "id": "NOTIF-002",
+    "title": "Case Assignment",
+    "message": "You have been assigned to case CASE-004: Legal Framework Implementation.",
+    "type": "info",
+    "priority": "medium",
+    "timestamp": "2024-06-11T14:30:00Z",
+    "read": false,
+    "category": "assignment"
+  },
+  {
+    "id": "NOTIF-003",
+    "title": "Document Upload Successful",
+    "message": "Your document upload for case CASE-002 has been successfully processed.",
+    "type": "success",
+    "priority": "low",
+    "timestamp": "2024-06-11T10:15:00Z",
+    "read": true,
+    "category": "upload"
+  },
+  {
+    "id": "NOTIF-004",
+    "title": "Meeting Reminder",
+    "message": "Department meeting scheduled for tomorrow at 10:00 AM in Conference Room A.",
+    "type": "info",
+    "priority": "medium",
+    "timestamp": "2024-06-10T16:45:00Z",
+    "read": false,
+    "category": "meeting"
+  },
+  {
+    "id": "NOTIF-005",
+    "title": "Report Generated",
+    "message": "Monthly compliance report has been generated and is ready for review.",
+    "type": "success",
+    "priority": "low",
+    "timestamp": "2024-06-10T09:30:00Z",
+    "read": true,
+    "category": "report"
+  },
+  {
+    "id": "NOTIF-006",
+    "title": "Security Alert",
+    "message": "Unusual login activity detected. Please verify your recent sessions.",
+    "type": "warning",
+    "priority": "high",
+    "timestamp": "2024-06-09T22:15:00Z",
+    "read": false,
+    "category": "security"
+  },
+  {
+    "id": "NOTIF-007",
+    "title": "Task Completed",
+    "message": "Task 'Prepare Compliance Report' has been marked as completed.",
+    "type": "success",
+    "priority": "low",
+    "timestamp": "2024-06-09T15:20:00Z",
+    "read": true,
+    "category": "task"
+  },
+  {
+    "id": "NOTIF-008",
+    "title": "Deadline Approaching",
+    "message": "Case CASE-003 deadline is approaching in 2 days. Please ensure all requirements are met.",
+    "type": "warning",
+    "priority": "medium",
+    "timestamp": "2024-06-08T11:00:00Z",
+    "read": false,
+    "category": "deadline"
+  }
+]

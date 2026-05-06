@@ -1,0 +1,111 @@
+{
+  "tasks": [
+    {
+      "id": "task-1",
+      "title": "Prepare Compliance Report",
+      "status": "In Progress",
+      "deadline": "2024-06-15",
+      "priority": "High",
+      "department": "Legal",
+      "assignedTo": "Anita Sharma",
+      "progress": 65,
+      "description": "Compile monthly compliance report for all active cases"
+    },
+    {
+      "id": "task-2",
+      "title": "Collect Supporting Documents",
+      "status": "Pending",
+      "deadline": "2024-06-20",
+      "priority": "Medium",
+      "department": "Finance",
+      "assignedTo": "Raj Kumar",
+      "progress": 0,
+      "description": "Gather financial documents for audit verification"
+    },
+    {
+      "id": "task-3",
+      "title": "Submit Final Report",
+      "status": "Pending",
+      "deadline": "2024-06-25",
+      "priority": "High",
+      "department": "Education",
+      "assignedTo": "Priya Singh",
+      "progress": 0,
+      "description": "Final report submission for educational modernization project"
+    },
+    {
+      "id": "task-4",
+      "title": "Review Legal Documentation",
+      "status": "Completed",
+      "deadline": "2024-06-10",
+      "priority": "High",
+      "department": "Legal",
+      "assignedTo": "Amit Patel",
+      "progress": 100,
+      "description": "Review and approve all legal documentation"
+    },
+    {
+      "id": "task-5",
+      "title": "Update Risk Assessment",
+      "status": "In Progress",
+      "deadline": "2024-06-18",
+      "priority": "Medium",
+      "department": "Environment",
+      "assignedTo": "Sunita Reddy",
+      "progress": 40,
+      "description": "Update environmental risk assessment for ongoing projects"
+    }
+  ],
+  "alerts": [
+    "⚠ Deadline approaching in 2 days",
+    "⚠ Missing supporting documents",
+    "⚠ High priority case requires immediate attention",
+    "⚠ Compliance score below threshold",
+    "⚠ Pending verification required"
+  ],
+  "progressTimeline": [
+    {
+      "id": "timeline-1",
+      "title": "Project Initiation",
+      "description": "Project kickoff and initial planning completed",
+      "date": "2024-05-01",
+      "status": "completed"
+    },
+    {
+      "id": "timeline-2",
+      "title": "Requirements Gathering",
+      "description": "All stakeholder requirements collected and documented",
+      "date": "2024-05-15",
+      "status": "completed"
+    },
+    {
+      "id": "timeline-3",
+      "title": "Implementation Phase",
+      "description": "Current implementation of compliance measures",
+      "date": "2024-06-01",
+      "status": "active"
+    },
+    {
+      "id": "timeline-4",
+      "title": "Testing & Validation",
+      "description": "Testing and validation of implemented solutions",
+      "date": "2024-06-20",
+      "status": "pending"
+    },
+    {
+      "id": "timeline-5",
+      "title": "Final Deployment",
+      "description": "Final deployment and handover",
+      "date": "2024-06-30",
+      "status": "pending"
+    }
+  ],
+  "stats": {
+    "totalTasks": 5,
+    "inProgress": 2,
+    "pending": 2,
+    "completed": 1,
+    "overdue": 0,
+    "riskLevel": "Medium"
+  }
+}

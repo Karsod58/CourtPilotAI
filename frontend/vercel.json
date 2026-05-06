@@ -1,9 +1,9 @@
 ﻿{
   "version": 2,
   "name": "courtpilot-ai",
-  "buildCommand": "cd CourtPilotAI && npm install && npm run build",
-  "outputDirectory": "CourtPilotAI/dist",
-  "installCommand": "cd CourtPilotAI && npm install",
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
     {

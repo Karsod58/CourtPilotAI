@@ -1,0 +1,50 @@
+{
+  "profile": {
+    "name": "Anita Sharma",
+    "email": "anita.sharma@gov.in",
+    "department": "Legal Department",
+    "role": "Legal Officer",
+    "employeeId": "GOV-2024-0456",
+    "phone": "+91-9876543210",
+    "location": "New Delhi, India",
+    "avatar": null
+  },
+  "notifications": {
+    "emailNotifications": true,
+    "pushNotifications": true,
+    "smsNotifications": false,
+    "deadlineAlerts": true,
+    "caseUpdates": true,
+    "systemUpdates": false,
+    "weeklyReports": true,
+    "monthlyReports": true
+  },
+  "privacy": {
+    "profileVisibility": "department",
+    "showEmail": true,
+    "showPhone": false,
+    "showDepartment": true,
+    "showRole": true,
+    "dataSharing": true,
+    "analyticsTracking": true
+  },
+  "system": {
+    "language": "en",
+    "timezone": "Asia/Kolkata",
+    "dateFormat": "DD/MM/YYYY",
+    "timeFormat": "24h",
+    "theme": "light",
+    "autoSave": true,
+    "autoLogout": "30min",
+    "twoFactorAuth": false
+  },
+  "preferences": {
+    "defaultDashboard": "overview",
+    "itemsPerPage": 10,
+    "compactView": false,
+    "showTooltips": true,
+    "enableAnimations": true,
+    "soundEffects": false,
+    "keyboardShortcuts": true
+  }
+}

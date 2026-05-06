@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1",
+    "name": "Admin User",
+    "email": "admin@gov.in",
+    "password": "Admin123",
+    "department": "Administration",
+    "role": "Administrator",
+    "employeeId": "EMP001",
+    "avatar": null
+  },
+  {
+    "id": "2",
+    "name": "Court Officer",
+    "email": "officer@gov.in",
+    "password": "Officer123",
+    "department": "Legal",
+    "role": "Officer",
+    "employeeId": "EMP002",
+    "avatar": null
+  },
+  {
+    "id": "3",
+    "name": "John Doe",
+    "email": "john@gov.in",
+    "password": "John123",
+    "department": "Compliance",
+    "role": "Manager",
+    "employeeId": "EMP003",
+    "avatar": null
+  }
+]
