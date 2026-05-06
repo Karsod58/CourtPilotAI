@@ -4,6 +4,14 @@ AI-powered system to convert court judgments into verified, trackable action pla
 
 ---
 
+## 🌐 Live Demo
+
+- **Frontend**: https://court-pilot-ai.vercel.app
+- **Backend API**: https://courtpilotai-production.up.railway.app
+- **API Docs**: https://courtpilotai-production.up.railway.app/docs
+
+---
+
 ## 🚀 Quick Deploy to Railway
 
 ### 1. Create Railway Account
@@ -37,7 +45,7 @@ DOCUMENT_STORAGE_PATH=/app/data/documents
 VECTOR_STORE_PATH=/app/data/vector_store
 LOG_FILE=/app/logs/courtpilot.log
 MAX_UPLOAD_SIZE=52428800
-CORS_ORIGINS=["http://localhost:5173"]
+CORS_ORIGINS=["http://localhost:5173","https://court-pilot-ai.vercel.app"]
 ```
 
 ### 4. Deploy Frontend to Vercel
