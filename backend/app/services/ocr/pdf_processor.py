@@ -4,11 +4,9 @@ Handles PDF parsing, OCR, and text extraction
 """
 from typing import Dict, List, Any, Optional, Tuple
 import pytesseract
-from pdf2image import convert_from_path
 from PIL import Image
 import PyPDF2
 import pdfplumber
-import cv2
 import numpy as np
 from pathlib import Path
 from loguru import logger
@@ -16,6 +14,23 @@ import hashlib
 import re
 
 from app.core.config import settings
+
+# Optional imports for enhanced features
+try:
+    from pdf2image import convert_from_path
+    PDF2IMAGE_AVAILABLE = True
+except ImportError:
+    logger.warning("pdf2image not available - image-based OCR will be disabled")
+    PDF2IMAGE_AVAILABLE = False
+    convert_from_path = None
+
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    logger.warning("opencv-python not available - image preprocessing will be disabled")
+    CV2_AVAILABLE = False
+    cv2 = None
 
 
 class PDFProcessor:
@@ -390,6 +405,11 @@ class PDFProcessor:
         Returns:
             Preprocessed image
         """
+        # If opencv is not available, return original image
+        if not CV2_AVAILABLE:
+            logger.debug("OpenCV not available - skipping image preprocessing")
+            return image
+            
         try:
             # Convert PIL Image to OpenCV format
             img_array = np.array(image)

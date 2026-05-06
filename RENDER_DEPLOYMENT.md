@@ -20,7 +20,7 @@
    - **Branch**: `main`
    - **Root Directory**: `backend`
    - **Runtime**: Python 3
-   - **Build Command**: `pip install -r requirements.txt`
+   - **Build Command**: `pip install -r requirements-minimal.txt`
    - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
 4. **Select Plan**
@@ -123,7 +123,21 @@ vercel
 - **Spins down after 15 minutes of inactivity**
 - First request after spin-down takes 30-60 seconds
 - 750 hours/month free (enough for one service)
-- 512 MB RAM, 0.1 CPU
+- **512 MB RAM** - Using minimal requirements (no ML packages)
+- 0.1 CPU
+
+### What's Disabled in Free Tier
+Due to 512MB RAM limit, these features are disabled:
+- ❌ RAG/Vector search (sentence-transformers ~300MB)
+- ❌ Image preprocessing (opencv-python ~200MB)
+- ❌ Advanced OCR features
+- ✅ Basic PDF text extraction still works
+- ✅ All API endpoints work
+- ✅ Chat with AI works (using OpenAI/Anthropic/Ollama API)
+- ✅ Directive extraction works
+- ✅ Verification workflow works
+
+**To enable all features:** Upgrade to paid plan ($7/month for 512MB+ RAM)
 
 ### Keep Backend Alive (Optional)
 Use a service like UptimeRobot to ping your backend every 10 minutes:
