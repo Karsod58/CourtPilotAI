@@ -72,18 +72,21 @@ const AIProcessing = () => {
   const [judgmentData, setJudgmentData] = useState<any>(null);
   const [processingStatus, setProcessingStatus] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Get judgment ID from location state or localStorage
-  const judgmentId = location.state?.judgmentId || localStorage.getItem("currentJudgmentId");
-  const uploadedFile = location.state?.fileName || localStorage.getItem("uploadedFile") || "judgment.pdf";
+  // Get judgment ID from location state ONLY (don't use localStorage)
+  const judgmentId = location.state?.judgmentId;
+  const uploadedFile = location.state?.fileName || null;
 
-  // Update localStorage when we get a new judgment ID from navigation state
+  // Clear old localStorage data and update with new data if provided
   useEffect(() => {
     if (location.state?.judgmentId) {
       localStorage.setItem("currentJudgmentId", location.state.judgmentId);
-    }
-    if (location.state?.fileName) {
-      localStorage.setItem("uploadedFile", location.state.fileName);
+      localStorage.setItem("uploadedFile", location.state.fileName || "");
+    } else {
+      // If no state provided, clear the old data
+      localStorage.removeItem("currentJudgmentId");
+      localStorage.removeItem("uploadedFile");
     }
   }, [location.state]);
 
@@ -91,6 +94,8 @@ const AIProcessing = () => {
   useEffect(() => {
     if (!judgmentId) {
       setError("No judgment ID found. Please upload a judgment first.");
+      setProgress(0);
+      setLoading(false);
       return;
     }
 
@@ -293,7 +298,7 @@ const AIProcessing = () => {
               <FileCheck2 size={22} />
               <div>
                 <span>Uploaded File</span>
-                <strong>{uploadedFile}</strong>
+                <strong>{uploadedFile || "No PDF file"}</strong>
               </div>
             </div>
           </div>

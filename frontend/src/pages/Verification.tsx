@@ -46,15 +46,17 @@ const Verification = () => {
   const [judgmentData, setJudgmentData] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get judgment ID from location state or localStorage
-  const judgmentId = location.state?.judgmentId || localStorage.getItem("currentJudgmentId");
+  // Get judgment ID from location state ONLY (don't use localStorage for initial load)
+  const judgmentId = location.state?.judgmentId;
 
   // Load directives for specific judgment
   useEffect(() => {
     if (judgmentId) {
       loadJudgmentDirectives(judgmentId);
     } else {
-      loadPendingDirectives();
+      // If no judgment ID provided, show error
+      setError("No judgment selected. Please upload and process a judgment first.");
+      setLoading(false);
     }
   }, [judgmentId]);
 
@@ -217,6 +219,20 @@ const Verification = () => {
         isEditing ? fields : undefined
       );
       
+      // Save verified case data for action plan
+      const verifiedCaseData = {
+        caseTitle: fields.caseTitle,
+        caseNumber: fields.caseNumber,
+        orderDate: fields.orderDate,
+        petitioner: fields.petitioner,
+        respondent: fields.respondent,
+        directive: fields.directive,
+        department: fields.department,
+        deadline: fields.deadline,
+        judgmentId: currentDirective.judgment_id
+      };
+      localStorage.setItem("verifiedCase", JSON.stringify(verifiedCaseData));
+      
       setStatus("approved");
       
       // Wait for user to see the success message
@@ -303,9 +319,9 @@ const Verification = () => {
           ) : error ? (
             <div className="error-state">
               <AlertTriangle size={48} />
-              <h3>Error Loading Directives</h3>
+              <h3>No Judgment Selected</h3>
               <p>{error}</p>
-              <button onClick={loadPendingDirectives}>Retry</button>
+              <button onClick={() => navigate("/upload")}>Upload Judgment</button>
             </div>
           ) : directives.length === 0 ? (
             <div className="empty-state">

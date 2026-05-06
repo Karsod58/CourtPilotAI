@@ -53,13 +53,54 @@ const ActionPlan = () => {
 
   const verifiedCase: VerifiedCase = useMemo(() => {
     const saved = localStorage.getItem("verifiedCase");
-    return saved ? JSON.parse(saved) : fallbackCase;
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    
+    // If no saved case, return fallback (user accessed page directly)
+    return fallbackCase;
   }, []);
 
   // Load action plans from backend
   useEffect(() => {
     loadActionPlans();
+    loadJudgmentData();
   }, []);
+
+  const loadJudgmentData = async () => {
+    try {
+      const judgmentId = verifiedCase.judgmentId;
+      
+      if (!judgmentId) {
+        console.log("No judgment ID in verified case");
+        return;
+      }
+      
+      const judgment = await apiService.getJudgment(judgmentId);
+      
+      // Update verified case with real judgment data
+      const updatedCase = {
+        caseTitle: `${judgment.case_id} - ${judgment.court_name}`,
+        caseNumber: judgment.case_id,
+        orderDate: new Date(judgment.judgment_date).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        }),
+        petitioner: judgment.petitioner || verifiedCase.petitioner,
+        respondent: judgment.respondent || verifiedCase.respondent,
+        directive: verifiedCase.directive,
+        department: verifiedCase.department,
+        deadline: verifiedCase.deadline,
+        judgmentId: judgment.id
+      };
+      
+      localStorage.setItem("verifiedCase", JSON.stringify(updatedCase));
+    } catch (err) {
+      console.error('Error loading judgment data:', err);
+      // Continue with existing data
+    }
+  };
 
   const loadActionPlans = async () => {
     try {
