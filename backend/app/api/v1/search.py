@@ -19,7 +19,7 @@ router = APIRouter()
 @router.get("/")
 async def search_all(
     q: str = Query(..., min_length=2),
-    search_type: str = Query("all", regex="^(all|judgments|directives|actions)$"),
+    search_type: str = Query("all", pattern="^(all|judgments|directives|actions)$"),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):

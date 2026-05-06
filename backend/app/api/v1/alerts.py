@@ -19,8 +19,8 @@ router = APIRouter()
 
 @router.get("/")
 async def get_all_alerts(
-    severity: Optional[str] = Query(None, regex="^(critical|high|medium|low)$"),
-    status: Optional[str] = Query(None, regex="^(active|acknowledged|resolved)$"),
+    severity: Optional[str] = Query(None, pattern="^(critical|high|medium|low)$"),
+    status: Optional[str] = Query(None, pattern="^(active|acknowledged|resolved)$"),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
