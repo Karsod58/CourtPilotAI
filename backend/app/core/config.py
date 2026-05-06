@@ -109,17 +109,16 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    # CORS - Can be comma-separated string or list
-    CORS_ORIGINS_STR: str = "http://localhost:3000,http://localhost:5173"
+    # CORS
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
     
-    @property
-    def CORS_ORIGINS(self) -> List[str]:
-        """Parse CORS origins from comma-separated string or return default list"""
-        if self.CORS_ORIGINS_STR:
+    def get_cors_origins(self) -> List[str]:
+        """Parse CORS origins from comma-separated string"""
+        if isinstance(self.CORS_ORIGINS, str):
             # Split by comma and strip whitespace
-            origins = [origin.strip() for origin in self.CORS_ORIGINS_STR.split(",")]
-            return [origin for origin in origins if origin]  # Remove empty strings
-        return ["http://localhost:3000", "http://localhost:5173"]
+            origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+            return [origin for origin in origins if origin]
+        return self.CORS_ORIGINS if isinstance(self.CORS_ORIGINS, list) else []
     
     # Logging
     LOG_LEVEL: str = "INFO"
