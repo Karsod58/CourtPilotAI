@@ -84,40 +84,46 @@ const Dashboard = () => {
       }))
     : [];
 
-  // Placeholder for department data (will be replaced with real data later)
-  const departmentData = [
-    { name: "Legal Dept.", value: 29 },
-    { name: "Finance Dept.", value: 25 },
-    { name: "PWD", value: 18 },
-  ];
+  const [departmentData, setDepartmentData] = useState<any[]>([]);
+  const [deadlines, setDeadlines] = useState<any[]>([]);
 
-  // Placeholder for deadlines (will be replaced with real data later)
-  const deadlines = [
-    {
-      id: "WP-001",
-      title: "Sample Case 1",
-      department: "Legal",
-      deadline: "15 May",
-      daysLeft: "10 days",
-      priority: "High"
-    },
-    {
-      id: "WP-002",
-      title: "Sample Case 2",
-      department: "Finance",
-      deadline: "20 May",
-      daysLeft: "15 days",
-      priority: "Medium"
-    },
-    {
-      id: "WP-003",
-      title: "Sample Case 3",
-      department: "PWD",
-      deadline: "25 May",
-      daysLeft: "20 days",
-      priority: "Low"
+  // Load real deadlines and department data
+  useEffect(() => {
+    const loadDashboardExtras = async () => {
+      try {
+        // Load upcoming deadlines (next 7 days)
+        const deadlinesResponse = await apiService.getUpcomingDeadlines(7);
+        const formattedDeadlines = deadlinesResponse.items.slice(0, 3).map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          department: item.department,
+          deadline: new Date(item.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+          daysLeft: item.days_until >= 0 ? `${item.days_until} days` : `${Math.abs(item.days_until)} days overdue`,
+          priority: item.priority.charAt(0).toUpperCase() + item.priority.slice(1)
+        }));
+        setDeadlines(formattedDeadlines);
+
+        // Load department performance for chart
+        const deptPerformance = await apiService.getDepartmentPerformance();
+        if (deptPerformance && deptPerformance.departments) {
+          const deptData = deptPerformance.departments.slice(0, 3).map((dept: any) => ({
+            name: dept.department_name,
+            value: dept.total_directives || 0
+          }));
+          setDepartmentData(deptData);
+        }
+      } catch (err) {
+        console.error('Error loading dashboard extras:', err);
+        // Set empty arrays on error
+        setDeadlines([]);
+        setDepartmentData([]);
+      }
+    };
+
+    if (dashboardData) {
+      loadDashboardExtras();
     }
-  ];
+  }, [dashboardData]);
 
   if (loading && !dashboardData) {
     return (
@@ -217,13 +223,13 @@ const Dashboard = () => {
                 <ResponsiveContainer width={150} height={150}>
                   <PieChart>
                     <Pie
-                      data={departmentData}
+                      data={departmentData.length > 0 ? departmentData : [{ name: "Loading", value: 1 }]}
                       innerRadius={45}
                       outerRadius={65}
                       paddingAngle={2}
                       dataKey="value"
                     >
-                      {departmentData.map((_, index) => (
+                      {(departmentData.length > 0 ? departmentData : [{ name: "Loading", value: 1 }]).map((_, index) => (
                         <Cell key={index} fill={colors[index]} />
                       ))}
                     </Pie>
@@ -232,12 +238,16 @@ const Dashboard = () => {
                 </ResponsiveContainer>
 
                 <div className="legend">
-                  {departmentData.map((item, index) => (
-                    <p key={item.name}>
-                      <span style={{ background: colors[index] }} />
-                      {item.name} <b>{item.value}%</b>
-                    </p>
-                  ))}
+                  {departmentData.length > 0 ? (
+                    departmentData.map((item, index) => (
+                      <p key={item.name}>
+                        <span style={{ background: colors[index] }} />
+                        {item.name} <b>{item.value}</b>
+                      </p>
+                    ))
+                  ) : (
+                    <p style={{ color: '#6b7280' }}>Loading departments...</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -262,36 +272,44 @@ const Dashboard = () => {
               </thead>
 
               <tbody>
-                {deadlines.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.id}</td>
-                    <td>{item.title}</td>
-                    <td>{item.department}</td>
-                    <td>{item.deadline}</td>
-                    <td
-                      className={
-                        item.priority === "High"
-                          ? "red-text"
-                          : item.priority === "Medium"
-                          ? "orange-text"
-                          : "green-text"
-                      }
-                    >
-                      {item.daysLeft}
-                    </td>
-                    <td
-                      className={
-                        item.priority === "High"
-                          ? "red-text"
-                          : item.priority === "Medium"
-                          ? "orange-text"
-                          : "green-text"
-                      }
-                    >
-                      {item.priority}
+                {deadlines.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                      No upcoming deadlines
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  deadlines.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.id}</td>
+                      <td>{item.title}</td>
+                      <td>{item.department}</td>
+                      <td>{item.deadline}</td>
+                      <td
+                        className={
+                          item.priority === "High"
+                            ? "red-text"
+                            : item.priority === "Medium"
+                            ? "orange-text"
+                            : "green-text"
+                        }
+                      >
+                        {item.daysLeft}
+                      </td>
+                      <td
+                        className={
+                          item.priority === "High"
+                            ? "red-text"
+                            : item.priority === "Medium"
+                            ? "orange-text"
+                            : "green-text"
+                        }
+                      >
+                        {item.priority}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

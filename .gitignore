@@ -25,9 +25,20 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Virtual environments (NEVER commit these!)
 venv/
 env/
 ENV/
+.venv/
+.env/
+
+# Root-level duplicates (use backend/ versions instead)
+/app/
+/data/
+/logs/
+/courtpilot.db
+/requirements*.txt
 
 # Database
 *.db

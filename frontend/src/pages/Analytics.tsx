@@ -35,6 +35,7 @@ const Analytics = () => {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [complianceData, setComplianceData] = useState<any>(null);
   const [departmentData, setDepartmentData] = useState<any[]>([]);
+  const [rejectedDirectives, setRejectedDirectives] = useState<any[]>([]);
 
   useEffect(() => {
     loadAnalytics();
@@ -62,11 +63,50 @@ const Analytics = () => {
       }));
       setDepartmentData(deptChartData);
       
+      // Load rejected directives
+      await loadRejectedDirectives();
+      
     } catch (err) {
       console.error('Error loading analytics:', err);
       setError("Failed to load analytics data. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRejectedDirectives = async () => {
+    try {
+      // Get all pending directives first, then filter for rejected
+      const response = await apiService.getPendingDirectives();
+      // Filter for rejected status (verification_status = 'rejected')
+      const rejected = response.items.filter(
+        (d: any) => d.verification_status === 'rejected'
+      );
+      setRejectedDirectives(rejected.slice(0, 10)); // Show top 10
+    } catch (err) {
+      console.error('Error loading rejected directives:', err);
+      // Fallback: try getting all judgments and their directives
+      try {
+        const judgments = await apiService.getJudgments(1, 20);
+        const allRejected: any[] = [];
+        
+        for (const judgment of judgments.items) {
+          try {
+            const directives = await apiService.getJudgmentDirectives(judgment.id);
+            const rejected = directives.items.filter(
+              (d: any) => d.verification_status === 'rejected'
+            );
+            allRejected.push(...rejected);
+          } catch (e) {
+            // Skip this judgment
+          }
+        }
+        
+        setRejectedDirectives(allRejected.slice(0, 10));
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+        setRejectedDirectives([]);
+      }
     }
   };
 
@@ -338,6 +378,64 @@ const Analytics = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Rejected Directives Section */}
+        <div className="chart-card full-width">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3>Rejected Directives ({rejectedDirectives.length})</h3>
+            <span style={{ fontSize: '14px', color: '#dc2626' }}>
+              <AlertTriangle size={16} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+              Requires Review
+            </span>
+          </div>
+          <div className="chart-content">
+            {rejectedDirectives.length === 0 ? (
+              <p style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                No rejected directives found
+              </p>
+            ) : (
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <table className="cases-table" style={{ width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th>Directive</th>
+                      <th>Judgment ID</th>
+                      <th>Priority</th>
+                      <th>Rejected By</th>
+                      <th>Date</th>
+                      <th>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rejectedDirectives.map((directive) => (
+                      <tr key={directive.id}>
+                        <td style={{ maxWidth: '300px' }}>
+                          {directive.directive_text.substring(0, 100)}...
+                        </td>
+                        <td>{directive.judgment_id}</td>
+                        <td>
+                          <span className={`status-badge ${directive.priority.toLowerCase()}`}>
+                            {directive.priority}
+                          </span>
+                        </td>
+                        <td>{directive.verified_by || 'System'}</td>
+                        <td>
+                          {directive.verified_at 
+                            ? new Date(directive.verified_at).toLocaleDateString('en-IN')
+                            : 'N/A'
+                          }
+                        </td>
+                        <td style={{ maxWidth: '200px', fontSize: '13px', color: '#6b7280' }}>
+                          {directive.verification_notes || 'No reason provided'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>

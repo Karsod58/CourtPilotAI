@@ -424,7 +424,7 @@ async def get_deadline_statistics(
         
         overdue_directives = sum(
             1 for d in directives 
-            if d.deadline < datetime.utcnow() and d.status != 'completed'
+            if d.deadline < datetime.utcnow() and d.compliance_status != 'completed'
         )
         overdue_actions = sum(
             1 for a in action_plans 
@@ -432,7 +432,7 @@ async def get_deadline_statistics(
         )
         total_overdue = overdue_directives + overdue_actions
         
-        completed_directives = sum(1 for d in directives if d.status == 'completed')
+        completed_directives = sum(1 for d in directives if d.compliance_status == 'completed')
         completed_actions = sum(1 for a in action_plans if a.status == ActionStatus.COMPLETED)
         total_completed = completed_directives + completed_actions
         
@@ -445,7 +445,7 @@ async def get_deadline_statistics(
         future_date = datetime.utcnow() + timedelta(days=7)
         upcoming_directives = sum(
             1 for d in directives 
-            if datetime.utcnow() <= d.deadline <= future_date and d.status != 'completed'
+            if datetime.utcnow() <= d.deadline <= future_date and d.compliance_status != 'completed'
         )
         upcoming_actions = sum(
             1 for a in action_plans 

@@ -6,7 +6,8 @@ import {
   Upload,
   FileText,
   X,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import "./UploadJudgement.css";
 import AppLayout from "../components/layout/AppLayout";
@@ -67,16 +68,22 @@ const UploadJudgementEnhanced = () => {
       const formData = new FormData();
       formData.append('file', file);
       
+      console.log('Calling preview endpoint...');
       const response = await fetch('http://localhost:8000/api/v1/judgments/preview', {
         method: 'POST',
         body: formData,
       });
       
+      console.log('Preview response status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Preview failed:', errorText);
         throw new Error('Failed to extract metadata');
       }
       
       const data = await response.json();
+      console.log('Extracted data:', data);
       
       if (data.success && data.extracted_info) {
         const extracted = data.extracted_info;
@@ -87,6 +94,27 @@ const UploadJudgementEnhanced = () => {
           caseId: extracted.case_id || prev.caseId,
           court: extracted.court_name || prev.court,
           petitioner: extracted.petitioner || prev.petitioner,
+          respondent: extracted.respondent || prev.respondent,
+          judgmentDate: extracted.judgment_date || prev.judgmentDate,
+        }));
+        
+        setAutoFilled(true);
+        console.log('Auto-filled from PDF:', extracted);
+        
+        // Check if this file already exists
+        if (data.file_hash) {
+          checkDuplicate(data.file_hash);
+        }
+      } else {
+        console.warn('No extracted info in response:', data);
+      }
+    } catch (error) {
+      console.error('Error extracting metadata:', error);
+      // Don't show error to user - auto-fill is optional
+    } finally {
+      setExtracting(false);
+    }
+  };
           respondent: extracted.respondent || prev.respondent,
           judgmentDate: extracted.judgment_date || prev.judgmentDate,
         }));
@@ -228,8 +256,14 @@ const UploadJudgementEnhanced = () => {
       let errorMessage = "Failed to upload judgment. Please try again.";
       
       if (error.message) {
-        if (error.message.includes("already been uploaded") || error.message.includes("Duplicate")) {
-          errorMessage = "This PDF file has already been uploaded. Please select a different file or check your existing judgments.";
+        // Check for duplicate file error (409 Conflict)
+        if (error.message.includes("already been uploaded") || 
+            error.message.includes("Duplicate") ||
+            error.message.includes("document_hash") ||
+            error.message.toLowerCase().includes("conflict")) {
+          errorMessage = "⚠️ This PDF file has already been uploaded. Please select a different file or check your existing judgments in the Cases page.";
+        } else if (error.message.includes("409")) {
+          errorMessage = "⚠️ This file already exists in the system. Please check the Cases page to view existing judgments.";
         } else {
           errorMessage = error.message;
         }

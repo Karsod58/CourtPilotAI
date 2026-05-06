@@ -119,6 +119,8 @@ const SearchDropdown = ({ isOpen, onClose }: SearchDropdownProps) => {
     switch (type) {
       case 'case':
         return <FileText size={16} className="text-blue-500" />;
+      case 'directive':
+        return <AlertTriangle size={16} className="text-yellow-500" />;
       case 'department':
         return <Building size={16} className="text-purple-500" />;
       case 'party':
@@ -136,6 +138,8 @@ const SearchDropdown = ({ isOpen, onClose }: SearchDropdownProps) => {
     switch (type) {
       case 'case':
         return 'Case';
+      case 'directive':
+        return 'Directive';
       case 'department':
         return 'Department';
       case 'party':

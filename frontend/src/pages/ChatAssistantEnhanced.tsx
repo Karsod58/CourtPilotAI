@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { Bot, MessageCircle, Send, X, User, Loader2 } from "lucide-react";
-import { apiService, type ChatSession, type ChatMessage } from "../services/apiService";
+import { Bot, MessageCircle, Send, X, User, Loader2, FileText, Search } from "lucide-react";
+import { apiService, type ChatSession, type ChatMessage, type Judgment } from "../services/apiService";
 import { useAuth } from "../contexts/AuthContext";
 
 interface Message {
   role: "assistant" | "user";
   content: string;
   timestamp?: string;
+  sources?: any[];
 }
 
 const ChatAssistantEnhanced = () => {
@@ -22,6 +23,10 @@ const ChatAssistantEnhanced = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [session, setSession] = useState<ChatSession | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedJudgment, setSelectedJudgment] = useState<Judgment | null>(null);
+  const [showJudgmentSelector, setShowJudgmentSelector] = useState(false);
+  const [judgments, setJudgments] = useState<Judgment[]>([]);
+  const [judgmentSearchQuery, setJudgmentSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -36,7 +41,41 @@ const ChatAssistantEnhanced = () => {
     }
   }, [isOpen, user]);
 
-  const initializeSession = async () => {
+  // Load judgments when selector is opened
+  useEffect(() => {
+    if (showJudgmentSelector && judgments.length === 0) {
+      loadJudgments();
+    }
+  }, [showJudgmentSelector]);
+
+  // Listen for external judgment selection (from Cases page)
+  useEffect(() => {
+    const handleOpenWithJudgment = (event: any) => {
+      const judgment = event.detail;
+      if (judgment) {
+        setIsOpen(true);
+        setTimeout(() => {
+          handleJudgmentSelect(judgment);
+        }, 100);
+      }
+    };
+
+    window.addEventListener('openChatWithJudgment', handleOpenWithJudgment);
+    return () => {
+      window.removeEventListener('openChatWithJudgment', handleOpenWithJudgment);
+    };
+  }, [session]);
+
+  const loadJudgments = async () => {
+    try {
+      const response = await apiService.getJudgments(1, 50);
+      setJudgments(response.items);
+    } catch (err) {
+      console.error("Failed to load judgments:", err);
+    }
+  };
+
+  const initializeSession = async (judgmentId?: string) => {
     try {
       const userId = user?.id || "guest_user";
       const userName = user?.name || "Guest User";
@@ -44,16 +83,62 @@ const ChatAssistantEnhanced = () => {
       const newSession = await apiService.createChatSession(
         userId,
         userName,
-        undefined,
-        "general"
+        judgmentId,
+        judgmentId ? "judgment" : "general"
       );
       
       setSession(newSession);
       setError(null);
+
+      // Update welcome message if judgment is selected
+      if (judgmentId && selectedJudgment) {
+        setMessages([{
+          role: "assistant",
+          content: `Hello! I'm CourtPilot AI. I'm now focused on Case ${selectedJudgment.case_id} (${selectedJudgment.court_name}). Ask me about this judgment's directives, deadlines, compliance requirements, or any other details.`,
+        }]);
+      }
     } catch (err: any) {
       console.error("Failed to create chat session:", err);
       setError("Failed to connect to AI. Using offline mode.");
     }
+  };
+
+  const handleJudgmentSelect = async (judgment: Judgment) => {
+    setSelectedJudgment(judgment);
+    setShowJudgmentSelector(false);
+    
+    // Close existing session and create new one with judgment context
+    if (session) {
+      try {
+        await apiService.closeChatSession(session.id);
+      } catch (err) {
+        console.error("Failed to close session:", err);
+      }
+    }
+    
+    setSession(null);
+    setMessages([]);
+    await initializeSession(judgment.id);
+  };
+
+  const handleClearJudgment = async () => {
+    setSelectedJudgment(null);
+    
+    // Close existing session and create new general one
+    if (session) {
+      try {
+        await apiService.closeChatSession(session.id);
+      } catch (err) {
+        console.error("Failed to close session:", err);
+      }
+    }
+    
+    setSession(null);
+    setMessages([{
+      role: "assistant",
+      content: "Hello! I'm CourtPilot AI powered by Ollama. Ask me about court judgments, directives, deadlines, or compliance requirements.",
+    }]);
+    await initializeSession();
   };
 
   const handleSend = async () => {
@@ -84,6 +169,7 @@ const ChatAssistantEnhanced = () => {
           role: "assistant",
           content: response.content,
           timestamp: response.timestamp,
+          sources: response.sources,
         };
 
         setMessages((prev) => [...prev, botMessage]);
@@ -192,6 +278,91 @@ const ChatAssistantEnhanced = () => {
               </div>
             )}
 
+            {/* Judgment Context Display */}
+            {selectedJudgment && (
+              <div className="chat-judgment-context">
+                <div className="judgment-context-header">
+                  <FileText size={16} />
+                  <span>Discussing: Case {selectedJudgment.case_id}</span>
+                  <button 
+                    className="clear-judgment-btn"
+                    onClick={handleClearJudgment}
+                    title="Clear judgment context"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <div className="judgment-context-details">
+                  <span>{selectedJudgment.court_name}</span>
+                  <span>•</span>
+                  <span>{new Date(selectedJudgment.judgment_date).toLocaleDateString()}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Judgment Selector Button */}
+            {!selectedJudgment && (
+              <div className="chat-judgment-selector-btn">
+                <button onClick={() => setShowJudgmentSelector(true)}>
+                  <FileText size={16} />
+                  Select a judgment for context
+                </button>
+              </div>
+            )}
+
+            {/* Judgment Selector Modal */}
+            {showJudgmentSelector && (
+              <div className="judgment-selector-modal">
+                <div className="judgment-selector-header">
+                  <h3>Select Judgment</h3>
+                  <button onClick={() => setShowJudgmentSelector(false)}>
+                    <X size={18} />
+                  </button>
+                </div>
+                
+                <div className="judgment-search">
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search by case ID, court, or parties..."
+                    value={judgmentSearchQuery}
+                    onChange={(e) => setJudgmentSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <div className="judgment-list">
+                  {judgments
+                    .filter(j => 
+                      judgmentSearchQuery === "" ||
+                      j.case_id.toLowerCase().includes(judgmentSearchQuery.toLowerCase()) ||
+                      j.court_name.toLowerCase().includes(judgmentSearchQuery.toLowerCase()) ||
+                      j.petitioner?.toLowerCase().includes(judgmentSearchQuery.toLowerCase()) ||
+                      j.respondent?.toLowerCase().includes(judgmentSearchQuery.toLowerCase())
+                    )
+                    .map(judgment => (
+                      <div
+                        key={judgment.id}
+                        className="judgment-item"
+                        onClick={() => handleJudgmentSelect(judgment)}
+                      >
+                        <div className="judgment-item-header">
+                          <strong>{judgment.case_id}</strong>
+                          <span className="judgment-date">
+                            {new Date(judgment.judgment_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="judgment-item-court">{judgment.court_name}</div>
+                        {judgment.petitioner && judgment.respondent && (
+                          <div className="judgment-item-parties">
+                            {judgment.petitioner} vs {judgment.respondent}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
             <div className="chat-suggestions">
               <button onClick={() => setInput("What is the deadline?")}>
                 Deadline
@@ -225,7 +396,14 @@ const ChatAssistantEnhanced = () => {
                     )}
                   </div>
 
-                  <p>{message.content}</p>
+                  <div className="message-content">
+                    <p>{message.content}</p>
+                    {message.sources && message.sources.length > 0 && (
+                      <div className="message-sources">
+                        <small>Sources: {message.sources.map(s => s.type).join(", ")}</small>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
 
@@ -283,6 +461,187 @@ const ChatAssistantEnhanced = () => {
           color: #6b7280;
           border-top: 1px solid #e5e7eb;
           text-align: center;
+        }
+
+        .chat-judgment-context {
+          background: #eff6ff;
+          border: 1px solid #3b82f6;
+          padding: 0.75rem 1rem;
+          margin: 0.5rem 1rem;
+          border-radius: 0.5rem;
+        }
+
+        .judgment-context-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-weight: 600;
+          color: #1e40af;
+          margin-bottom: 0.25rem;
+        }
+
+        .judgment-context-details {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.875rem;
+          color: #3b82f6;
+          margin-left: 1.5rem;
+        }
+
+        .clear-judgment-btn {
+          margin-left: auto;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 0.25rem;
+          color: #1e40af;
+          display: flex;
+          align-items: center;
+        }
+
+        .clear-judgment-btn:hover {
+          color: #1e3a8a;
+        }
+
+        .chat-judgment-selector-btn {
+          padding: 0.5rem 1rem;
+          margin: 0.5rem 1rem;
+        }
+
+        .chat-judgment-selector-btn button {
+          width: 100%;
+          padding: 0.75rem;
+          background: #f3f4f6;
+          border: 1px dashed #9ca3af;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          color: #4b5563;
+          font-size: 0.875rem;
+          transition: all 0.2s;
+        }
+
+        .chat-judgment-selector-btn button:hover {
+          background: #e5e7eb;
+          border-color: #6b7280;
+        }
+
+        .judgment-selector-modal {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: white;
+          z-index: 1000;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .judgment-selector-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1rem;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .judgment-selector-header h3 {
+          margin: 0;
+          font-size: 1.125rem;
+          font-weight: 600;
+        }
+
+        .judgment-selector-header button {
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 0.25rem;
+          display: flex;
+          align-items: center;
+        }
+
+        .judgment-search {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .judgment-search input {
+          flex: 1;
+          border: 1px solid #d1d5db;
+          border-radius: 0.375rem;
+          padding: 0.5rem;
+          font-size: 0.875rem;
+        }
+
+        .judgment-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 0.5rem;
+        }
+
+        .judgment-item {
+          padding: 0.75rem;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.5rem;
+          margin-bottom: 0.5rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .judgment-item:hover {
+          background: #f9fafb;
+          border-color: #3b82f6;
+        }
+
+        .judgment-item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.25rem;
+        }
+
+        .judgment-item-header strong {
+          color: #1f2937;
+          font-size: 0.875rem;
+        }
+
+        .judgment-date {
+          font-size: 0.75rem;
+          color: #6b7280;
+        }
+
+        .judgment-item-court {
+          font-size: 0.875rem;
+          color: #4b5563;
+          margin-bottom: 0.25rem;
+        }
+
+        .judgment-item-parties {
+          font-size: 0.75rem;
+          color: #6b7280;
+        }
+
+        .message-content {
+          flex: 1;
+        }
+
+        .message-sources {
+          margin-top: 0.5rem;
+          padding-top: 0.5rem;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .message-sources small {
+          color: #6b7280;
+          font-size: 0.75rem;
         }
 
         .spinning {

@@ -367,6 +367,27 @@ const VerifiedDirectives = () => {
                         {directive.court_name}
                       </div>
                     </div>
+                    <button
+                      onClick={() => {
+                        localStorage.setItem("currentJudgmentId", directive.judgment_id);
+                        window.location.href = `/lifecycle/${directive.judgment_id}`;
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        border: '1px solid #3b82f6',
+                        background: 'white',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      View Lifecycle
+                    </button>
                   </div>
 
                   {/* Directive Text */}

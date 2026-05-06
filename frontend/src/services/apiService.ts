@@ -235,11 +235,14 @@ class APIService {
   }
 
   /**
-   * Get judgment processing status
+   * Download judgment PDF
    */
-  async getJudgmentStatus(judgmentId: string): Promise<any> {
-    const response = await fetch(`${this.baseURL}/judgments/${judgmentId}/status`);
-    return this.handleResponse(response);
+  async downloadJudgment(judgmentId: string): Promise<Blob> {
+    const response = await fetch(`${this.baseURL}/judgments/${judgmentId}/download`);
+    if (!response.ok) {
+      throw new Error('Failed to download judgment');
+    }
+    return response.blob();
   }
 
   /**

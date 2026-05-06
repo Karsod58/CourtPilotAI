@@ -76,28 +76,29 @@ const LifecycleTracking = () => {
       setLoading(true);
       setError(null);
       
-      // Try to get judgment ID from URL params or localStorage
+      // Priority 1: Get judgment ID from URL params
       let targetJudgmentId = id;
+      
+      // Priority 2: Get from localStorage (last uploaded/clicked)
       if (!targetJudgmentId) {
-        const verifiedCase = localStorage.getItem("verifiedCase");
-        if (verifiedCase) {
-          const parsed = JSON.parse(verifiedCase);
-          targetJudgmentId = parsed.judgmentId;
-        }
+        targetJudgmentId = localStorage.getItem("currentJudgmentId") || undefined;
       }
       
+      // Priority 3: Get the most recent judgment
       if (!targetJudgmentId) {
-        // Get the first judgment if no ID specified
         const judgments = await apiService.getJudgments(1, 1);
         if (judgments.items.length > 0) {
           targetJudgmentId = judgments.items[0].id;
+          // Store it for future use
+          localStorage.setItem("currentJudgmentId", targetJudgmentId);
         }
       }
       
       if (!targetJudgmentId) {
-        throw new Error('No judgment found');
+        throw new Error('No judgment found. Please upload a judgment first.');
       }
       
+      setJudgmentId(targetJudgmentId);
       setJudgmentId(targetJudgmentId);
       
       // Load lifecycle and timeline data

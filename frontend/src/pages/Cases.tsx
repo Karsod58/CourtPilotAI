@@ -10,6 +10,7 @@ import {
   Clock,
   User,
   AlertCircle,
+  MessageCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import "../styles/dashboard.css";
@@ -24,6 +25,7 @@ const Cases = () => {
   const [showActionsModal, setShowActionsModal] = useState(false);
   const [selectedCase, setSelectedCase] = useState<Judgment | null>(null);
   const [caseActions, setCaseActions] = useState<any[]>([]);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     loadCases();
@@ -46,6 +48,9 @@ const Cases = () => {
   const handleViewActions = async (case_: Judgment) => {
     setSelectedCase(case_);
     setShowActionsModal(true);
+    
+    // Store the current judgment ID for lifecycle tracking
+    localStorage.setItem("currentJudgmentId", case_.id);
     
     try {
       const directives = await apiService.getJudgmentDirectives(case_.id);
@@ -86,6 +91,28 @@ const Cases = () => {
       day: 'numeric', 
       year: 'numeric' 
     });
+  };
+
+  const handleDownloadPDF = async (judgment: Judgment) => {
+    try {
+      setDownloading(true);
+      const blob = await apiService.downloadJudgment(judgment.id);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${judgment.case_id.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      alert('Failed to download PDF. The file may not be available.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -287,6 +314,42 @@ const Cases = () => {
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setShowActionsModal(false)}>
                 Close
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  localStorage.setItem("currentJudgmentId", selectedCase.id);
+                  window.location.href = `/lifecycle/${selectedCase.id}`;
+                }}
+                style={{ marginRight: '8px' }}
+              >
+                <FileText size={16} />
+                View Lifecycle
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  // Store judgment for chat context
+                  localStorage.setItem("chatJudgmentContext", JSON.stringify(selectedCase));
+                  // Trigger chat to open with this judgment
+                  window.dispatchEvent(new CustomEvent('openChatWithJudgment', { 
+                    detail: selectedCase 
+                  }));
+                  setShowActionsModal(false);
+                }}
+                style={{ marginRight: '8px', background: '#10b981' }}
+              >
+                <MessageCircle size={16} />
+                Chat about this case
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => handleDownloadPDF(selectedCase)}
+                disabled={downloading}
+                style={{ marginRight: '8px', background: '#8b5cf6' }}
+              >
+                <Download size={16} />
+                {downloading ? 'Downloading...' : 'Download PDF'}
               </button>
               <button className="btn-primary">
                 <FileText size={16} />
