@@ -35,9 +35,9 @@
    HOST=0.0.0.0
    PORT=10000
    
-   # Database (Render provides free PostgreSQL)
+   # Database - Render provides DATABASE_URL automatically if you add PostgreSQL
+   # Just set USE_SQLITE=False and the app will use DATABASE_URL from Render
    USE_SQLITE=False
-   DATABASE_URL=<will be auto-filled if you add PostgreSQL>
    
    # AI Provider (choose one)
    LLM_PROVIDER=ollama
@@ -49,7 +49,7 @@
    # LLM_PROVIDER=openai
    # OPENAI_API_KEY=your_key_here
    
-   # Security
+   # Security (IMPORTANT: Generate a new secret key)
    SECRET_KEY=<generate with: openssl rand -hex 32>
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -70,12 +70,12 @@
    ENABLE_AUTO_EXTRACT=True
    ```
 
-6. **Add PostgreSQL Database (Optional but Recommended)**
-   - Click "New +" → "PostgreSQL"
+6. **Add PostgreSQL Database (Recommended)**
+   - In Render Dashboard, click "New +" → "PostgreSQL"
    - Name: `courtpilot-db`
    - Plan: Free
-   - After creation, copy the "Internal Database URL"
-   - Add it as `DATABASE_URL` in your web service environment variables
+   - After creation, Render automatically sets `DATABASE_URL` environment variable
+   - Your web service will automatically use it
 
 7. **Deploy**
    - Click "Create Web Service"

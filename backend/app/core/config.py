@@ -26,13 +26,37 @@ class Settings(BaseSettings):
     MYSQL_DB: str = "courtpilot"
     MYSQL_USER: str = "root"
     MYSQL_PASSWORD: str = ""
-    USE_SQLITE: bool = False  # Use MySQL instead of SQLite
+    USE_SQLITE: bool = True  # Default to SQLite for easy setup
+    
+    # Database - PostgreSQL (for production/Render)
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "courtpilot"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = ""
+    
+    # Direct DATABASE_URL override (for Render/Railway)
+    DATABASE_URL_OVERRIDE: str = ""
     
     @property
     def DATABASE_URL(self) -> str:
+        # If DATABASE_URL is provided directly (from Render/Railway), use it
+        if self.DATABASE_URL_OVERRIDE:
+            # Convert postgres:// to postgresql+asyncpg://
+            url = self.DATABASE_URL_OVERRIDE
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+            return url
+            
         if self.USE_SQLITE:
             return "sqlite+aiosqlite:///./courtpilot.db"
-        # MySQL async connection - URL encode password to handle special characters
+            
+        # Check if PostgreSQL credentials are provided
+        if self.POSTGRES_PASSWORD:
+            encoded_password = quote_plus(self.POSTGRES_PASSWORD)
+            return f"postgresql+asyncpg://{self.POSTGRES_USER}:{encoded_password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            
+        # Fallback to MySQL
         encoded_password = quote_plus(self.MYSQL_PASSWORD)
         return f"mysql+aiomysql://{self.MYSQL_USER}:{encoded_password}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}"
     
