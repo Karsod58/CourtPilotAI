@@ -3,26 +3,26 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { validateLoginForm } from "../utils/validation";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { useToast } from "../components/ToastContainer";
 import "../styles/dashboard.css";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isLoading, error } = useAuth();
+  const { showSuccess, showError } = useToast();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [touched, setTouched] = useState<{ email: boolean; password: boolean }>({ email: false, password: false });
 
   // Check if user was redirected from registration
   useEffect(() => {
     if (location.state?.from === 'register') {
-      setSuccessMessage("Registration successful! Please login with your credentials.");
+      showSuccess("Registration successful! Please login with your credentials.");
     }
-  }, [location.state]);
+  }, [location.state, showSuccess]);
 
   const validateField = (field: 'email' | 'password', value: string) => {
     const formData = { email: field === 'email' ? value : email, password: field === 'password' ? value : password };
@@ -59,9 +59,6 @@ const Login = () => {
     if (touched[field]) {
       validateField(field, value);
     }
-    
-    // Clear validation errors when user starts typing
-    setValidationErrors([]);
   };
 
   const handleFieldBlur = (field: 'email' | 'password') => {
@@ -84,7 +81,8 @@ const Login = () => {
     const validation = validateLoginForm({ email, password });
     
     if (!validation.isValid) {
-      setValidationErrors(validation.errors);
+      // Show first error as toast
+      showError(validation.errors[0]);
       
       // Set field-specific errors
       validation.errors.forEach(error => {
@@ -99,17 +97,17 @@ const Login = () => {
     }
     
     // Clear any existing errors
-    setValidationErrors([]);
     setFieldErrors({});
 
     try {
       const success = await login(email, password);
       if (success) {
+        showSuccess("Login successful!");
         navigate("/");
       }
     } catch (error) {
       console.error('Login error:', error);
-      setValidationErrors(['An unexpected error occurred. Please try again.']);
+      showError('An unexpected error occurred. Please try again.');
     }
   };
 
@@ -140,18 +138,6 @@ const Login = () => {
 
           <ErrorBoundary>
           <form onSubmit={handleLogin} className="auth-form">
-            {/* Validation Summary */}
-            {validationErrors.length > 0 && (
-              <div className="form-validation-summary">
-                <h4>Please fix the following errors:</h4>
-                <ul>
-                  {validationErrors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             <div className="auth-form-row">
               <input
                 className={`auth-input ${fieldErrors.email ? 'error' : ''}`}
@@ -192,22 +178,10 @@ const Login = () => {
               )}
             </div>
 
-            {successMessage && (
-              <div className="auth-success">
-                {successMessage}
-              </div>
-            )}
-
-            {error && (
-              <div className="auth-error">
-                {error}
-              </div>
-            )}
-
             <button 
               type="submit" 
               className={`auth-btn ${isLoading ? 'loading' : ''}`}
-              disabled={isLoading || validationErrors.length > 0}
+              disabled={isLoading}
             >
               {isLoading ? "" : "Login"}
             </button>

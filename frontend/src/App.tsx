@@ -24,6 +24,7 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Deadlines from "./pages/Deadlines";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ToastProvider } from "./components/ToastContainer";
 import LifecycleTracking from "./pages/LifecycleTracking";
 import AlertsEscalation from "./pages/AlertsEscalation";
 
@@ -183,7 +184,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );
