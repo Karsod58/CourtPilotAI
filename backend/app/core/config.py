@@ -84,13 +84,18 @@ class Settings(BaseSettings):
     
     # AI/LLM Configuration
     OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str = ""  # For Groq or custom OpenAI endpoints
     ANTHROPIC_API_KEY: str = ""
     OLLAMA_BASE_URL: str = "https://ollama.com"
     OLLAMA_API_KEY: str = ""
     OLLAMA_MODEL: str = "llama3.1:8b"
-    LLM_PROVIDER: str = "ollama"  # openai, anthropic, or ollama
+    LLM_PROVIDER: str = "ollama"  # openai, anthropic, ollama, or mock
     LLM_MODEL: str = "llama3.1:8b"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
+    
+    # Ollama Fallback Configuration (used when primary provider fails)
+    OLLAMA_FALLBACK_URL: str = "http://localhost:11434"
+    OLLAMA_FALLBACK_MODEL: str = "llama3.1:8b"
     
     # Vector Store
     VECTOR_STORE_TYPE: str = "faiss"

@@ -57,104 +57,181 @@ except ImportError:
 
 
 class LLMService:
-    """Service for LLM operations with Ollama support"""
+    """Service for LLM operations with multi-provider fallback support"""
     
     def __init__(self):
-        """Initialize LLM service"""
+        """Initialize LLM service with fallback chain: Primary → Ollama → Mock"""
         self.provider = settings.LLM_PROVIDER
         self.model_name = settings.LLM_MODEL
         self.llm = None
         self.ollama_client = None
+        self.ollama_fallback = None
         self.embeddings = None
         self.use_native_ollama = False
+        self.has_ollama_fallback = False
         
         try:
-            # Initialize LLM based on provider
+            # Initialize primary LLM based on provider
             if self.provider == "ollama":
-                # Use native Ollama client for cloud API (preferred)
-                if OLLAMA_CLIENT_AVAILABLE:
-                    self.ollama_client = OllamaClient(
-                        host=settings.OLLAMA_BASE_URL,
-                        headers={'Authorization': f'Bearer {settings.OLLAMA_API_KEY}'} if settings.OLLAMA_API_KEY else {}
-                    )
-                    self.use_native_ollama = True
-                    logger.info(f"Initialized Ollama client: {settings.OLLAMA_MODEL} at {settings.OLLAMA_BASE_URL}")
-                
-                # Fallback to LangChain if native client not available
-                elif OLLAMA_LANGCHAIN_AVAILABLE and LANGCHAIN_AVAILABLE:
-                    ollama_config = {
-                        "base_url": settings.OLLAMA_BASE_URL,
-                        "model": settings.OLLAMA_MODEL,
-                        "temperature": 0.1,
-                    }
-                    
-                    if settings.OLLAMA_API_KEY:
-                        ollama_config["headers"] = {
-                            "Authorization": f"Bearer {settings.OLLAMA_API_KEY}"
-                        }
-                    
-                    self.llm = ChatOllama(**ollama_config)
-                    logger.info(f"Initialized Ollama LLM via LangChain: {settings.OLLAMA_MODEL} at {settings.OLLAMA_BASE_URL}")
-                else:
-                    logger.error("Neither Ollama client nor LangChain available")
-                    return
-                
-                # For embeddings, use OpenAI if available
-                try:
-                    if OPENAI_AVAILABLE and settings.OPENAI_API_KEY:
-                        self.embeddings = OpenAIEmbeddings(
-                            model=settings.EMBEDDING_MODEL,
-                            api_key=settings.OPENAI_API_KEY
-                        )
-                    else:
-                        self.embeddings = None
-                        logger.warning("Embeddings not available, some features may be limited")
-                except Exception as e:
-                    self.embeddings = None
-                    logger.warning(f"Embeddings initialization failed: {e}")
+                self._init_ollama_primary()
                 
             elif self.provider == "openai":
-                if not OPENAI_AVAILABLE:
-                    logger.error("OpenAI not available")
-                    return
-                
-                self.llm = ChatOpenAI(
-                    model=self.model_name,
-                    temperature=0.1,
-                    api_key=settings.OPENAI_API_KEY
-                )
-                self.embeddings = OpenAIEmbeddings(
-                    model=settings.EMBEDDING_MODEL,
-                    api_key=settings.OPENAI_API_KEY
-                )
-                logger.info(f"Initialized OpenAI LLM: {self.model_name}")
+                self._init_openai_primary()
                 
             elif self.provider == "anthropic":
-                if not ANTHROPIC_AVAILABLE:
-                    logger.error("Anthropic not available")
-                    return
+                self._init_anthropic_primary()
                 
-                self.llm = ChatAnthropic(
-                    model=self.model_name,
-                    temperature=0.1,
-                    api_key=settings.ANTHROPIC_API_KEY
+            elif self.provider == "mock":
+                logger.info("Using mock LLM provider (no real AI)")
+                self.llm = None
+            else:
+                raise ValueError(f"Unsupported LLM provider: {self.provider}")
+            
+            # Always try to initialize Ollama as fallback (if not primary)
+            if self.provider != "ollama":
+                self._init_ollama_fallback()
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize LLM service: {e}")
+            # Try Ollama fallback
+            self._init_ollama_fallback()
+            if not self.has_ollama_fallback:
+                logger.warning("No LLM available, will use mock service")
+                self.llm = None
+                self.ollama_client = None
+    
+    def _init_openai_primary(self):
+        """Initialize OpenAI/Groq as primary provider"""
+        if not OPENAI_AVAILABLE:
+            logger.error("OpenAI not available")
+            return
+        
+        try:
+            # Check if using Groq (has custom base URL)
+            base_url = getattr(settings, 'OPENAI_BASE_URL', None)
+            provider_name = "Groq" if base_url and "groq.com" in base_url else "OpenAI"
+            
+            openai_config = {
+                "model": self.model_name,
+                "temperature": 0.1,
+                "api_key": settings.OPENAI_API_KEY
+            }
+            
+            if base_url:
+                openai_config["base_url"] = base_url
+            
+            self.llm = ChatOpenAI(**openai_config)
+            
+            # Initialize embeddings
+            try:
+                if settings.OPENAI_API_KEY:
+                    embedding_config = {
+                        "model": settings.EMBEDDING_MODEL,
+                        "api_key": settings.OPENAI_API_KEY
+                    }
+                    if base_url and "groq.com" not in base_url:  # Groq doesn't support embeddings
+                        embedding_config["base_url"] = base_url
+                    self.embeddings = OpenAIEmbeddings(**embedding_config)
+            except Exception as e:
+                logger.warning(f"Embeddings initialization failed: {e}")
+                self.embeddings = None
+            
+            logger.info(f"✓ Initialized {provider_name} LLM: {self.model_name}")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI/Groq: {e}")
+            raise
+    
+    def _init_ollama_primary(self):
+        """Initialize Ollama as primary provider"""
+        # Use native Ollama client for cloud API (preferred)
+        if OLLAMA_CLIENT_AVAILABLE:
+            try:
+                self.ollama_client = OllamaClient(
+                    host=settings.OLLAMA_BASE_URL,
+                    headers={'Authorization': f'Bearer {settings.OLLAMA_API_KEY}'} if settings.OLLAMA_API_KEY else {}
                 )
-                # Anthropic doesn't have embeddings, use OpenAI for embeddings
-                if OPENAI_AVAILABLE and settings.OPENAI_API_KEY:
+                self.use_native_ollama = True
+                logger.info(f"✓ Initialized Ollama client: {settings.OLLAMA_MODEL} at {settings.OLLAMA_BASE_URL}")
+                return
+            except Exception as e:
+                logger.warning(f"Native Ollama client failed: {e}")
+        
+        # Fallback to LangChain if native client not available
+        if OLLAMA_LANGCHAIN_AVAILABLE and LANGCHAIN_AVAILABLE:
+            try:
+                ollama_config = {
+                    "base_url": settings.OLLAMA_BASE_URL,
+                    "model": settings.OLLAMA_MODEL,
+                    "temperature": 0.1,
+                }
+                
+                if settings.OLLAMA_API_KEY:
+                    ollama_config["headers"] = {
+                        "Authorization": f"Bearer {settings.OLLAMA_API_KEY}"
+                    }
+                
+                self.llm = ChatOllama(**ollama_config)
+                logger.info(f"✓ Initialized Ollama LLM via LangChain: {settings.OLLAMA_MODEL} at {settings.OLLAMA_BASE_URL}")
+            except Exception as e:
+                logger.error(f"Ollama LangChain initialization failed: {e}")
+                raise
+        else:
+            logger.error("Neither Ollama client nor LangChain available")
+            raise ValueError("Ollama dependencies not available")
+    
+    def _init_anthropic_primary(self):
+        """Initialize Anthropic as primary provider"""
+        if not ANTHROPIC_AVAILABLE:
+            logger.error("Anthropic not available")
+            raise ValueError("Anthropic dependencies not available")
+        
+        try:
+            self.llm = ChatAnthropic(
+                model=self.model_name,
+                temperature=0.1,
+                api_key=settings.ANTHROPIC_API_KEY
+            )
+            
+            # Anthropic doesn't have embeddings, use OpenAI for embeddings
+            if OPENAI_AVAILABLE and settings.OPENAI_API_KEY:
+                try:
                     self.embeddings = OpenAIEmbeddings(
                         model=settings.EMBEDDING_MODEL,
                         api_key=settings.OPENAI_API_KEY
                     )
-                else:
+                except Exception as e:
+                    logger.warning(f"Embeddings initialization failed: {e}")
                     self.embeddings = None
-                logger.info(f"Initialized Anthropic LLM: {self.model_name}")
             else:
-                raise ValueError(f"Unsupported LLM provider: {self.provider}")
+                self.embeddings = None
+            
+            logger.info(f"✓ Initialized Anthropic LLM: {self.model_name}")
+            
         except Exception as e:
-            logger.error(f"Failed to initialize LLM service: {e}")
-            self.llm = None
-            self.ollama_client = None
-            self.embeddings = None
+            logger.error(f"Failed to initialize Anthropic: {e}")
+            raise
+    
+    def _init_ollama_fallback(self):
+        """Initialize Ollama as fallback provider"""
+        try:
+            # Only initialize if we have Ollama settings
+            ollama_url = getattr(settings, 'OLLAMA_FALLBACK_URL', None) or "http://localhost:11434"
+            ollama_model = getattr(settings, 'OLLAMA_FALLBACK_MODEL', None) or "llama3.1:8b"
+            
+            if OLLAMA_LANGCHAIN_AVAILABLE and LANGCHAIN_AVAILABLE:
+                ollama_config = {
+                    "base_url": ollama_url,
+                    "model": ollama_model,
+                    "temperature": 0.1,
+                }
+                
+                self.ollama_fallback = ChatOllama(**ollama_config)
+                self.has_ollama_fallback = True
+                logger.info(f"✓ Initialized Ollama fallback: {ollama_model} at {ollama_url}")
+        except Exception as e:
+            logger.warning(f"Ollama fallback initialization failed: {e}")
+            self.has_ollama_fallback = False
     
     async def chat(
         self,
@@ -162,7 +239,7 @@ class LLMService:
         system_prompt: Optional[str] = None
     ) -> str:
         """
-        General chat interface for conversational AI
+        General chat interface with fallback chain: Primary → Ollama → Mock
         
         Args:
             messages: List of message dicts with 'role' and 'content'
@@ -171,74 +248,128 @@ class LLMService:
         Returns:
             AI response text
         """
-        # Use native Ollama client if available
-        if self.use_native_ollama and self.ollama_client:
-            try:
-                # Build messages for Ollama
-                ollama_messages = []
-                
-                if system_prompt:
-                    ollama_messages.append({
-                        'role': 'system',
-                        'content': system_prompt
-                    })
-                
-                for msg in messages:
-                    role = msg.get('role', 'user')
-                    content = msg.get('content', '')
-                    
-                    # Normalize role names
-                    if role == 'ai':
-                        role = 'assistant'
-                    
-                    ollama_messages.append({
-                        'role': role,
-                        'content': content
-                    })
-                
-                # Call Ollama API
-                response = self.ollama_client.chat(
-                    model=settings.OLLAMA_MODEL,
-                    messages=ollama_messages
-                )
-                
-                return response['message']['content']
-                
-            except Exception as e:
-                logger.error(f"Error in Ollama chat: {e}")
-                raise
-        
-        # Fallback to LangChain
-        if not self.llm:
-            raise ValueError("LLM not initialized - check dependencies and configuration")
-        
-        if not LANGCHAIN_AVAILABLE:
-            raise ValueError("LangChain not available - cannot use LLM features")
-        
+        # Try primary provider
         try:
-            # Convert messages to LangChain format
-            lc_messages = []
-            
-            if system_prompt:
-                lc_messages.append(SystemMessage(content=system_prompt))
-            
-            for msg in messages:
-                role = msg.get('role', 'user')
-                content = msg.get('content', '')
-                
-                if role == 'system':
-                    lc_messages.append(SystemMessage(content=content))
-                elif role == 'assistant' or role == 'ai':
-                    lc_messages.append(AIMessage(content=content))
-                else:  # user
-                    lc_messages.append(HumanMessage(content=content))
-            
-            response = await self.llm.ainvoke(lc_messages)
-            return response.content
-            
+            return await self._chat_with_provider(messages, system_prompt, use_fallback=False)
         except Exception as e:
-            logger.error(f"Error in chat: {e}")
-            raise
+            logger.warning(f"Primary provider failed: {e}")
+            
+            # Try Ollama fallback
+            if self.has_ollama_fallback:
+                try:
+                    logger.info("Trying Ollama fallback...")
+                    return await self._chat_with_provider(messages, system_prompt, use_fallback=True)
+                except Exception as e2:
+                    logger.warning(f"Ollama fallback failed: {e2}")
+            
+            # Final fallback to mock
+            logger.warning("All providers failed, using mock response")
+            return await mock_llm_service.answer_question(
+                question=messages[-1].get('content', ''),
+                context="",
+                conversation_history=messages[:-1] if len(messages) > 1 else None
+            )
+    
+    async def _chat_with_provider(
+        self,
+        messages: List[Dict[str, str]],
+        system_prompt: Optional[str] = None,
+        use_fallback: bool = False
+    ) -> str:
+        """
+        Chat with specific provider (primary or fallback)
+        
+        Args:
+            messages: List of message dicts
+            system_prompt: Optional system prompt
+            use_fallback: If True, use Ollama fallback instead of primary
+        
+        Returns:
+            AI response text
+        """
+        # Use Ollama fallback if requested
+        if use_fallback:
+            if not self.has_ollama_fallback:
+                raise ValueError("Ollama fallback not available")
+            llm_to_use = self.ollama_fallback
+        else:
+            # Use native Ollama client if available
+            if self.use_native_ollama and self.ollama_client:
+                return await self._chat_native_ollama(messages, system_prompt)
+            
+            if not self.llm:
+                raise ValueError("Primary LLM not initialized")
+            
+            llm_to_use = self.llm
+        
+        # Use LangChain for all other providers
+        if not LANGCHAIN_AVAILABLE:
+            raise ValueError("LangChain not available")
+        
+        # Convert messages to LangChain format
+        lc_messages = []
+        
+        if system_prompt:
+            lc_messages.append(SystemMessage(content=system_prompt))
+        
+        for msg in messages:
+            role = msg.get('role', 'user')
+            content = msg.get('content', '')
+            
+            if role == 'system':
+                lc_messages.append(SystemMessage(content=content))
+            elif role == 'assistant' or role == 'ai':
+                lc_messages.append(AIMessage(content=content))
+            else:  # user
+                lc_messages.append(HumanMessage(content=content))
+        
+        response = await llm_to_use.ainvoke(lc_messages)
+        return response.content
+    
+    async def _chat_native_ollama(
+        self,
+        messages: List[Dict[str, str]],
+        system_prompt: Optional[str] = None
+    ) -> str:
+        """
+        Chat using native Ollama client
+        
+        Args:
+            messages: List of message dicts
+            system_prompt: Optional system prompt
+        
+        Returns:
+            AI response text
+        """
+        # Build messages for Ollama
+        ollama_messages = []
+        
+        if system_prompt:
+            ollama_messages.append({
+                'role': 'system',
+                'content': system_prompt
+            })
+        
+        for msg in messages:
+            role = msg.get('role', 'user')
+            content = msg.get('content', '')
+            
+            # Normalize role names
+            if role == 'ai':
+                role = 'assistant'
+            
+            ollama_messages.append({
+                'role': role,
+                'content': content
+            })
+        
+        # Call Ollama API
+        response = self.ollama_client.chat(
+            model=settings.OLLAMA_MODEL,
+            messages=ollama_messages
+        )
+        
+        return response['message']['content']
     
     def _chunk_text(self, text: str, max_chars: int = 25000) -> List[str]:
         """
@@ -360,8 +491,8 @@ Extract all directives in JSON format with the following structure:
     
     async def extract_directives(self, text: str, case_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Extract directives from judgment text using LLM with chunking
-        Includes timeout and fallback to mock for demo
+        Extract directives from judgment text using LLM with fallback chain
+        Fallback order: Primary (Groq/OpenAI) → Ollama → Mock
         
         Args:
             text: Full judgment text
@@ -373,30 +504,63 @@ Extract all directives in JSON format with the following structure:
         try:
             logger.info(f"Extracting directives from text of length {len(text)}")
             
-            # Use mock service if configured or if LLM is not available
-            if settings.LLM_PROVIDER == "mock" or not self.llm:
+            # Use mock service if configured
+            if settings.LLM_PROVIDER == "mock":
                 logger.info("Using mock LLM service for directive extraction")
                 return await mock_llm_service.extract_directives(text, case_context)
             
-            # Try real LLM with timeout
+            # Try primary provider with timeout
             try:
-                # Set timeout to 30 seconds
+                logger.info(f"Trying primary provider ({self.provider})...")
                 result = await asyncio.wait_for(
                     self._extract_directives_real(text, case_context),
                     timeout=30.0
                 )
+                logger.info(f"✓ Primary provider succeeded: extracted {len(result)} directives")
                 return result
             except asyncio.TimeoutError:
-                logger.warning("LLM extraction timed out after 30s, falling back to mock")
-                return await mock_llm_service.extract_directives(text, case_context)
+                logger.warning(f"Primary provider timed out after 30s")
             except Exception as e:
-                logger.error(f"LLM extraction failed: {e}, falling back to mock")
-                return await mock_llm_service.extract_directives(text, case_context)
+                logger.warning(f"Primary provider failed: {e}")
+            
+            # Try Ollama fallback
+            if self.has_ollama_fallback:
+                try:
+                    logger.info("Trying Ollama fallback...")
+                    result = await asyncio.wait_for(
+                        self._extract_directives_with_ollama_fallback(text, case_context),
+                        timeout=45.0
+                    )
+                    logger.info(f"✓ Ollama fallback succeeded: extracted {len(result)} directives")
+                    return result
+                except asyncio.TimeoutError:
+                    logger.warning("Ollama fallback timed out after 45s")
+                except Exception as e:
+                    logger.warning(f"Ollama fallback failed: {e}")
+            
+            # Final fallback to mock
+            logger.warning("All AI providers failed, falling back to mock")
+            return await mock_llm_service.extract_directives(text, case_context)
             
         except Exception as e:
             logger.error(f"Error extracting directives: {e}")
             # Final fallback to mock
             return await mock_llm_service.extract_directives(text, case_context)
+    
+    async def _extract_directives_with_ollama_fallback(self, text: str, case_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Extract directives using Ollama fallback
+        """
+        # Temporarily swap to use fallback
+        original_llm = self.llm
+        self.llm = self.ollama_fallback
+        
+        try:
+            result = await self._extract_directives_real(text, case_context)
+            return result
+        finally:
+            # Restore original LLM
+            self.llm = original_llm
     
     async def _extract_directives_real(self, text: str, case_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
@@ -429,8 +593,8 @@ Extract all directives in JSON format with the following structure:
     
     async def assign_department(self, directive: Dict[str, Any], department_mapping: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Assign responsible department to a directive using LLM
-        Includes timeout and fallback to mock for demo
+        Assign responsible department to a directive using LLM with fallback chain
+        Fallback order: Primary (Groq/OpenAI) → Ollama → Mock
         
         Args:
             directive: Directive information
@@ -442,30 +606,63 @@ Extract all directives in JSON format with the following structure:
         try:
             logger.info(f"Assigning department for directive")
             
-            # Use mock service if configured or if LLM is not available
-            if settings.LLM_PROVIDER == "mock" or not self.llm:
+            # Use mock service if configured
+            if settings.LLM_PROVIDER == "mock":
                 logger.info("Using mock LLM service for department assignment")
                 return await mock_llm_service.assign_department(directive, department_mapping)
             
-            # Try real LLM with timeout
+            # Try primary provider with timeout
             try:
-                # Set timeout to 20 seconds
+                logger.info(f"Trying primary provider ({self.provider})...")
                 result = await asyncio.wait_for(
                     self._assign_department_real(directive, department_mapping),
                     timeout=20.0
                 )
+                logger.info(f"✓ Primary provider succeeded")
                 return result
             except asyncio.TimeoutError:
-                logger.warning("Department assignment timed out after 20s, falling back to mock")
-                return await mock_llm_service.assign_department(directive, department_mapping)
+                logger.warning("Primary provider timed out after 20s")
             except Exception as e:
-                logger.error(f"Department assignment failed: {e}, falling back to mock")
-                return await mock_llm_service.assign_department(directive, department_mapping)
+                logger.warning(f"Primary provider failed: {e}")
+            
+            # Try Ollama fallback
+            if self.has_ollama_fallback:
+                try:
+                    logger.info("Trying Ollama fallback...")
+                    result = await asyncio.wait_for(
+                        self._assign_department_with_ollama_fallback(directive, department_mapping),
+                        timeout=30.0
+                    )
+                    logger.info(f"✓ Ollama fallback succeeded")
+                    return result
+                except asyncio.TimeoutError:
+                    logger.warning("Ollama fallback timed out after 30s")
+                except Exception as e:
+                    logger.warning(f"Ollama fallback failed: {e}")
+            
+            # Final fallback to mock
+            logger.warning("All AI providers failed, falling back to mock")
+            return await mock_llm_service.assign_department(directive, department_mapping)
             
         except Exception as e:
             logger.error(f"Error assigning department: {e}")
             # Final fallback to mock
             return await mock_llm_service.assign_department(directive, department_mapping)
+    
+    async def _assign_department_with_ollama_fallback(self, directive: Dict[str, Any], department_mapping: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Assign department using Ollama fallback
+        """
+        # Temporarily swap to use fallback
+        original_llm = self.llm
+        self.llm = self.ollama_fallback
+        
+        try:
+            result = await self._assign_department_real(directive, department_mapping)
+            return result
+        finally:
+            # Restore original LLM
+            self.llm = original_llm
     
     async def _assign_department_real(self, directive: Dict[str, Any], department_mapping: Dict[str, Any]) -> Dict[str, Any]:
         """
