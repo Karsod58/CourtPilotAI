@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     
     # Server
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8000  # Default for local development, Railway will override via env var
     
     # Database - MySQL
     MYSQL_HOST: str = "localhost"
