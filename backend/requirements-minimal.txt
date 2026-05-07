@@ -1,62 +1,61 @@
-# Minimal requirements for Render free tier (512MB RAM)
-# This excludes heavy ML packages
+# ULTRA-MINIMAL Requirements for Railway (512MB limit)
+# Absolute bare minimum to run CourtPilot
+# Estimated memory: ~200-250MB
 
-# Core Framework
+# Core Framework (80MB)
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 python-multipart>=0.0.6
 
-# Database
+# Database - MySQL only (35MB)
 sqlalchemy>=2.0.25
-aiosqlite>=0.19.0
+aiomysql>=0.2.0
 alembic>=1.13.1
-asyncpg>=0.29.0
-psycopg2-binary>=2.9.9
 
-# Data Validation
+# Data Validation (15MB)
 pydantic>=2.5.3
 pydantic-settings>=2.1.0
+email-validator>=2.1.0
 
-# Authentication & Security
+# Authentication & Security (20MB)
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 bcrypt>=4.1.2
 
-# AI/LLM - Core (lightweight)
+# AI/LLM - OpenAI client ONLY (30MB)
 openai>=1.10.0
-anthropic>=0.8.1
 
-# LangChain (Required for AI features)
-langchain>=0.1.0
-langchain-core>=0.1.0
-langchain-openai>=0.0.5
-langchain-anthropic>=0.1.1
-langchain-community>=0.0.20
-
-# Document Processing (lightweight - NO opencv, NO sentence-transformers)
+# Document Processing - Essential only (50MB)
 pypdf>=4.0.1
-PyPDF2>=3.0.1
 pdfplumber>=0.10.3
-pytesseract>=0.3.10
 Pillow>=10.2.0
-# pdf2image>=1.17.0  # Commented out - requires poppler which is heavy
 
-# Utilities
+# Utilities (20MB)
 python-dotenv>=1.0.0
 loguru>=0.7.2
 aiofiles>=23.2.1
 httpx>=0.26.0
-requests>=2.31.0
 
-# Data Processing (minimal)
-numpy>=1.26.3
+# REMOVED ALL LANGCHAIN (saves 100MB+):
+# - langchain
+# - langchain-core
+# - langchain-openai
+# - langchain-community
+# - langchain-anthropic
 
-# NOTE: The following packages are EXCLUDED to fit in 512MB RAM:
-# - sentence-transformers (300MB+)
-# - opencv-python (200MB+)
-# - faiss-cpu (100MB+)
-# - pandas (50MB+)
-# - pdf2image (requires poppler)
-# 
-# RAG features and image preprocessing will be disabled
-# Basic PDF text extraction will still work
+# REMOVED (saves ~575MB):
+# - sentence-transformers (350MB)
+# - faiss-cpu (30MB)
+# - pandas (40MB)
+# - opencv-python (50MB)
+# - motor/pymongo (25MB)
+# - celery/redis (30MB)
+# - anthropic (10MB)
+# - PyPDF2 (10MB)
+# - pytesseract (10MB)
+# - pdf2image (10MB)
+# - asyncpg/psycopg2 (20MB)
+# - numpy (20MB) - Not critical
+
+# Total estimated memory: ~200-250MB
+# Buffer remaining: ~260-310MB (50-60%)

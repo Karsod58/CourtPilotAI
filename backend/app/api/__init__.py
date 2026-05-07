@@ -15,7 +15,7 @@ from app.api.v1 import (
     search,
     auth,
     deadlines,
-    rag,
+    # rag,  # Disabled to save memory (350MB) - not needed for core features
 )
 
 api_router = APIRouter()
@@ -32,4 +32,4 @@ api_router.include_router(alerts.router, prefix="/alerts", tags=["Alerts"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat Assistant"])
 api_router.include_router(search.router, prefix="/search", tags=["Search"])
-api_router.include_router(rag.router, prefix="/rag", tags=["RAG System"])
+# api_router.include_router(rag.router, prefix="/rag", tags=["RAG System"])  # Disabled to save memory
