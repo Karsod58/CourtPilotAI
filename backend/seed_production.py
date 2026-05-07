@@ -49,7 +49,7 @@ async def seed_database():
         {
             "name": "Admin User",
             "email": "admin@courtpilot.com",
-            "password": "admin123",
+            "password": "Admin123",
             "department": "Administration",
             "role": "Admin",
             "employee_id": "ADMIN001"
@@ -57,7 +57,7 @@ async def seed_database():
         {
             "name": "Legal Officer",
             "email": "legal@courtpilot.com",
-            "password": "legal123",
+            "password": "Legal123",
             "department": "Legal Department",
             "role": "Legal Officer",
             "employee_id": "LEGAL001"
@@ -65,7 +65,7 @@ async def seed_database():
         {
             "name": "Compliance Manager",
             "email": "compliance@courtpilot.com",
-            "password": "compliance123",
+            "password": "Compliance123",
             "department": "Compliance",
             "role": "Manager",
             "employee_id": "COMP001"

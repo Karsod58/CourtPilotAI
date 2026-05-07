@@ -47,7 +47,7 @@ async def create_admin_user():
             admin_user = User(
                 name="Admin User",
                 email="admin@courtpilot.com",
-                password="admin123",  # In production, this should be hashed!
+                password="Admin123",  # In production, this should be hashed!
                 department="Administration",
                 role="Admin",
                 employee_id="ADMIN001",
@@ -60,7 +60,7 @@ async def create_admin_user():
             
             print("✅ Admin user created successfully!")
             print(f"   Email: {admin_user.email}")
-            print(f"   Password: admin123")
+            print(f"   Password: Admin123")
             print(f"   Name: {admin_user.name}")
             print(f"   Department: {admin_user.department}")
             print(f"   Role: {admin_user.role}")
@@ -94,7 +94,7 @@ async def create_demo_users():
         {
             "name": "Admin User",
             "email": "admin@courtpilot.com",
-            "password": "admin123",
+            "password": "Admin123",
             "department": "Administration",
             "role": "Admin",
             "employee_id": "ADMIN001"
@@ -102,7 +102,7 @@ async def create_demo_users():
         {
             "name": "Legal Officer",
             "email": "legal@courtpilot.com",
-            "password": "legal123",
+            "password": "Legal123",
             "department": "Legal Department",
             "role": "Legal Officer",
             "employee_id": "LEGAL001"
@@ -110,7 +110,7 @@ async def create_demo_users():
         {
             "name": "Compliance Manager",
             "email": "compliance@courtpilot.com",
-            "password": "compliance123",
+            "password": "Compliance123",
             "department": "Compliance",
             "role": "Manager",
             "employee_id": "COMP001"
@@ -118,7 +118,7 @@ async def create_demo_users():
         {
             "name": "Department Head",
             "email": "head@courtpilot.com",
-            "password": "head123",
+            "password": "Head123",
             "department": "Operations",
             "role": "Department Head",
             "employee_id": "HEAD001"

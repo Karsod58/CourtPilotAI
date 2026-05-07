@@ -8,9 +8,9 @@ The following demo users will be created:
 
 | Name | Email | Password | Role | Employee ID |
 |------|-------|----------|------|-------------|
-| Admin User | admin@courtpilot.com | admin123 | Admin | ADMIN001 |
-| Legal Officer | legal@courtpilot.com | legal123 | Legal Officer | LEGAL001 |
-| Compliance Manager | compliance@courtpilot.com | compliance123 | Manager | COMP001 |
+| Admin User | admin@courtpilot.com | Admin123 | Admin | ADMIN001 |
+| Legal Officer | legal@courtpilot.com | Legal123 | Legal Officer | LEGAL001 |
+| Compliance Manager | compliance@courtpilot.com | Compliance123 | Manager | COMP001 |
 
 ⚠️ **IMPORTANT**: Change these passwords after first login!
 
@@ -102,7 +102,7 @@ Visit: https://courtpilotai-production.up.railway.app/docs
 
 Try logging in with:
 - Email: `admin@courtpilot.com`
-- Password: `admin123`
+- Password: `Admin123`
 
 ### Option 2: Check Database Directly
 1. Go to Railway Dashboard
