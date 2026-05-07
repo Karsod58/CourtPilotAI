@@ -9,12 +9,17 @@ from datetime import datetime
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import asyncio
 
 from app.models.judgment import Judgment, ProcessingStatus
 from app.models.directive import Directive
 from app.services.ocr.pdf_processor import pdf_processor
 from app.services.ai.llm_service import llm_service
 from app.core.config import settings
+
+# Limit concurrent PDF processing to prevent resource exhaustion
+MAX_CONCURRENT_PDF_PROCESSING = 2
+_pdf_processing_semaphore = asyncio.Semaphore(MAX_CONCURRENT_PDF_PROCESSING)
 
 
 class JudgmentService:
@@ -125,6 +130,7 @@ class JudgmentService:
     ) -> Dict[str, Any]:
         """
         Process judgment through complete AI pipeline
+        Uses semaphore to limit concurrent processing
         
         Args:
             db: Database session
@@ -133,8 +139,11 @@ class JudgmentService:
         Returns:
             Processing result
         """
-        try:
-            logger.info(f"Processing judgment: {judgment_id}")
+        # Acquire semaphore to limit concurrent processing
+        async with _pdf_processing_semaphore:
+            try:
+                active_count = MAX_CONCURRENT_PDF_PROCESSING - _pdf_processing_semaphore._value
+                logger.info(f"Processing judgment: {judgment_id} (active: {active_count}/{MAX_CONCURRENT_PDF_PROCESSING})")
             
             # Get judgment
             result = await db.execute(
@@ -149,7 +158,7 @@ class JudgmentService:
             judgment.status = ProcessingStatus.PROCESSING
             await db.commit()
             
-            # Step 1: PDF Processing and OCR
+            # Step 1: PDF Processing and OCR (NOW ASYNC)
             logger.info("Step 1: PDF Processing")
             pdf_data = await pdf_processor.process_pdf(judgment.document_path)
             

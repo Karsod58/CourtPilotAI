@@ -12,6 +12,7 @@ from pathlib import Path
 from loguru import logger
 import hashlib
 import re
+import asyncio
 
 from app.core.config import settings
 
@@ -766,9 +767,12 @@ class PDFProcessor:
                     'file_hash': self.calculate_file_hash(file_path) if Path(file_path).exists() else 'unknown'
                 }
             
-            # Step 2: Extract text with multi-method approach
+            # Step 2: Extract text with multi-method approach (BLOCKING - run in thread)
             try:
-                full_text, page_data = self.extract_text_from_pdf(file_path)
+                # Run blocking text extraction in thread pool to avoid blocking event loop
+                full_text, page_data = await asyncio.to_thread(
+                    self.extract_text_from_pdf, file_path
+                )
                 
                 # Validate extraction quality
                 total_chars = sum(p['char_count'] for p in page_data)

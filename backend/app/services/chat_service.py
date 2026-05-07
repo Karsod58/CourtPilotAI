@@ -14,6 +14,8 @@ from app.models.judgment import Judgment
 from app.models.directive import Directive
 from app.services.ai.llm_service import llm_service
 from app.services.rag.retriever import context_retriever
+from app.services.chat_context_lite import lightweight_context_retriever
+import asyncio
 
 
 class ChatService:
@@ -315,14 +317,15 @@ EXTRACTED DIRECTIVES ({len(directives)} total):
         use_rag: bool = True
     ) -> Dict[str, Any]:
         """
-        Process a chat message with RAG (Retrieval-Augmented Generation)
+        Process a chat message with lightweight context retrieval
+        Uses SQL queries instead of embeddings (0MB vs 350MB memory)
         
         Args:
             db: Database session
             session_id: Chat session ID
             user_message: User's message
             user_id: User ID
-            use_rag: Whether to use RAG for context retrieval
+            use_rag: Whether to use context retrieval
         
         Returns:
             Response with message and metadata
@@ -347,29 +350,47 @@ EXTRACTED DIRECTIVES ({len(directives)} total):
                 for msg in messages[:-1]  # Exclude the just-added user message
             ]
             
-            # Get context using RAG
+            # Get context using lightweight SQL-based retrieval
             context = ""
             sources = []
-            context_docs = []
+            context_items = []
             
             if use_rag:
-                # Retrieve relevant context using RAG
-                context_docs = context_retriever.retrieve_context(user_message, k=5)
-                
-                if context_docs:
-                    context = context_retriever.format_context_for_llm(context_docs)
-                    sources = [
-                        {
-                            "type": doc.get("type"),
-                            "id": doc.get("judgment_id") or doc.get("directive_id"),
-                            "case_id": doc.get("case_id"),
-                            "score": doc.get("score")
-                        }
-                        for doc in context_docs
-                    ]
-                    logger.info(f"Retrieved {len(context_docs)} context documents for query")
+                try:
+                    # Use SQL-based search with timeout protection (fast, no memory overhead)
+                    search_task = lightweight_context_retriever.search_judgments(
+                        db, user_message, limit=3
+                    )
+                    context_items = await asyncio.wait_for(search_task, timeout=2.0)
+                    
+                    # Also search directives if query seems directive-related
+                    if any(word in user_message.lower() for word in ['directive', 'action', 'department', 'deadline', 'priority']):
+                        directive_task = lightweight_context_retriever.search_directives(
+                            db, user_message, limit=3
+                        )
+                        directive_items = await asyncio.wait_for(directive_task, timeout=2.0)
+                        context_items.extend(directive_items)
+                    
+                    if context_items:
+                        context = lightweight_context_retriever.format_context_for_llm(context_items)
+                        sources = [
+                            {
+                                "type": item.get("type"),
+                                "id": item.get("judgment_id") or item.get("directive_id"),
+                                "case_id": item.get("case_id")
+                            }
+                            for item in context_items
+                        ]
+                        logger.info(f"Retrieved {len(context_items)} context items using SQL search")
+                    
+                except asyncio.TimeoutError:
+                    logger.warning("Context search timed out, proceeding without context")
+                    context_items = []
+                except Exception as search_error:
+                    logger.error(f"Context search error: {search_error}, proceeding without context")
+                    context_items = []
             
-            # Fallback to judgment-specific context if no RAG results
+            # Fallback to judgment-specific context if no search results
             if not context and session.judgment_id:
                 context = await self.get_judgment_context(db, session.judgment_id)
                 sources.append({
@@ -377,7 +398,7 @@ EXTRACTED DIRECTIVES ({len(directives)} total):
                     "judgment_id": session.judgment_id
                 })
             
-            # Build enhanced prompt with RAG context
+            # Build enhanced prompt with context
             if context:
                 enhanced_prompt = f"""Based on the following context from court judgments and directives, please answer the user's question.
 
@@ -405,25 +426,25 @@ Please provide a helpful, accurate answer based on the context provided. If the 
                 "assistant",
                 ai_response,
                 context_used={
-                    "rag_enabled": use_rag,
-                    "context_docs_count": len(context_docs),
+                    "search_method": "sql",
+                    "context_items_count": len(context_items),
                     "judgment_id": session.judgment_id
-                } if use_rag else {"judgment_id": session.judgment_id} if session.judgment_id else None,
+                },
                 sources=sources if sources else None
             )
             
-            logger.info(f"RAG-enhanced chat response generated for session {session_id}")
+            logger.info(f"Chat response generated for session {session_id} using lightweight context")
             
             return {
                 "message_id": ai_message.id,
                 "content": ai_response,
                 "sources": sources,
-                "context_used": len(context_docs) if use_rag else 0,
+                "context_used": len(context_items),
                 "timestamp": ai_message.created_at
             }
             
         except Exception as e:
-            logger.error(f"Error in RAG chat: {e}")
+            logger.error(f"Error in chat: {e}")
             raise
     
     async def summarize_judgment_chat(
