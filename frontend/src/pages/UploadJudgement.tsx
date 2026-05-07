@@ -12,6 +12,9 @@ import "../styles/dashboard.css";
 import AppLayout from "../components/layout/AppLayout";
 import { apiService } from "../services/apiService";
 
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
 const UploadJudgement = () => {
   const navigate = useNavigate();
 
@@ -102,7 +105,7 @@ const UploadJudgement = () => {
       formData.append('case_type', 'civil'); // Temporary
       formData.append('auto_extract', 'true');
       
-      const response = await fetch('http://localhost:8000/api/v1/judgments/upload', {
+      const response = await fetch(`${API_BASE_URL}/judgments/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -125,7 +128,7 @@ const UploadJudgement = () => {
         
         // Delete the temporary upload
         try {
-          await fetch(`http://localhost:8000/api/v1/judgments/${result.id}`, {
+          await fetch(`${API_BASE_URL}/judgments/${result.id}`, {
             method: 'DELETE',
           });
         } catch (e) {

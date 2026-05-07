@@ -263,6 +263,19 @@ class APIService {
     return this.handleResponse(response);
   }
 
+  /**
+   * Get judgment processing status
+   */
+  async getJudgmentStatus(judgmentId: string): Promise<{
+    status: string;
+    directives_count?: number;
+    page_count?: number;
+    progress?: number;
+  }> {
+    const response = await fetch(`${this.baseURL}/judgments/${judgmentId}/status`);
+    return this.handleResponse(response);
+  }
+
   // ============================================================================
   // CHAT ENDPOINTS
   // ============================================================================

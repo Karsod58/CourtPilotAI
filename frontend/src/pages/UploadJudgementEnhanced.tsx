@@ -13,6 +13,9 @@ import "./UploadJudgement.css";
 import AppLayout from "../components/layout/AppLayout";
 import { apiService } from "../services/apiService";
 
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
 const UploadJudgementEnhanced = () => {
   const navigate = useNavigate();
 
@@ -69,7 +72,7 @@ const UploadJudgementEnhanced = () => {
       formData.append('file', file);
       
       console.log('Calling preview endpoint...');
-      const response = await fetch('http://localhost:8000/api/v1/judgments/preview', {
+      const response = await fetch(`${API_BASE_URL}/judgments/preview`, {
         method: 'POST',
         body: formData,
       });
@@ -137,7 +140,7 @@ const UploadJudgementEnhanced = () => {
 
   const checkDuplicate = async (fileHash: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/judgments/check-duplicate/${fileHash}`);
+      const response = await fetch(`${API_BASE_URL}/judgments/check-duplicate/${fileHash}`);
       
       if (!response.ok) {
         return; // Silently fail - not critical
