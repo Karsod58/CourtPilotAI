@@ -16,12 +16,12 @@ except ImportError:
 
 class EmbeddingService:
     """
-    Service for generating text embeddings
+    Service for generating text embeddings with lazy loading
     """
     
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
         """
-        Initialize embedding service
+        Initialize embedding service (lazy loading - model loaded on first use)
         
         Args:
             model_name: Name of the sentence-transformers model to use
@@ -29,18 +29,34 @@ class EmbeddingService:
         self.model_name = model_name
         self.model = None
         self.embedding_dim = 384  # Default for all-MiniLM-L6-v2
+        self._model_loaded = False
         
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            try:
-                logger.info(f"Loading embedding model: {model_name}")
-                self.model = SentenceTransformer(model_name)
-                self.embedding_dim = self.model.get_sentence_embedding_dimension()
-                logger.info(f"Embedding model loaded successfully (dim={self.embedding_dim})")
-            except Exception as e:
-                logger.error(f"Failed to load embedding model: {e}")
-                self.model = None
-        else:
+    def _load_model(self):
+        """Lazy load the model only when needed"""
+        if self._model_loaded:
+            return
+            
+        self._model_loaded = True
+        
+        # Check if embeddings are disabled via environment variable
+        import os
+        if os.getenv('DISABLE_EMBEDDINGS', 'false').lower() == 'true':
+            logger.info("Embeddings disabled via DISABLE_EMBEDDINGS environment variable")
+            self.model = None
+            return
+        
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
             logger.warning("Sentence transformers not available - using fallback embeddings")
+            return
+            
+        try:
+            logger.info(f"Loading embedding model: {self.model_name}")
+            self.model = SentenceTransformer(self.model_name)
+            self.embedding_dim = self.model.get_sentence_embedding_dimension()
+            logger.info(f"Embedding model loaded successfully (dim={self.embedding_dim})")
+        except Exception as e:
+            logger.error(f"Failed to load embedding model: {e}")
+            self.model = None
     
     def encode(self, texts: List[str], batch_size: int = 32) -> Optional[np.ndarray]:
         """
@@ -55,6 +71,9 @@ class EmbeddingService:
         """
         if not texts:
             return None
+        
+        # Lazy load model on first use
+        self._load_model()
         
         if self.model is None:
             # Fallback: return random embeddings (for development)
