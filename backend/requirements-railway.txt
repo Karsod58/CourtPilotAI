@@ -1,0 +1,65 @@
+# Optimized Requirements for Railway (512MB limit)
+# Removes unused dependencies to reduce memory footprint
+# Estimated memory: ~300-350MB (vs 840MB with full requirements)
+
+# Core Framework (80MB)
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Database - MySQL only (35MB)
+sqlalchemy>=2.0.25
+aiomysql>=0.2.0
+alembic>=1.13.1
+
+# Data Validation (15MB)
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
+email-validator>=2.1.0
+
+# Authentication & Security (20MB)
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.1.2
+
+# AI/LLM - Core only (100MB)
+openai>=1.10.0
+
+# LangChain - Minimal (80MB)
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-openai>=0.0.5
+
+# Document Processing - Essential only (50MB)
+pypdf>=4.0.1
+pdfplumber>=0.10.3
+Pillow>=10.2.0
+
+# Utilities (20MB)
+python-dotenv>=1.0.0
+loguru>=0.7.2
+aiofiles>=23.2.1
+httpx>=0.26.0
+
+# Data Processing - Minimal (20MB)
+numpy>=1.26.3
+
+# REMOVED (saves ~575MB):
+# - sentence-transformers (350MB) - Use DISABLE_EMBEDDINGS=true
+# - faiss-cpu (30MB) - Not needed without embeddings
+# - pandas (40MB) - Not used in codebase
+# - opencv-python (50MB) - Optional, can skip image preprocessing
+# - motor/pymongo (25MB) - MongoDB not used
+# - celery/redis (30MB) - Not used, using FastAPI BackgroundTasks
+# - anthropic (10MB) - Only if using Claude
+# - langchain-community (20MB) - Not needed for core features
+# - langchain-anthropic (10MB) - Not using Claude
+# - PyPDF2 (10MB) - Duplicate of pypdf
+# - pytesseract (10MB) - OCR optional
+# - pdf2image (10MB) - Not critical
+# - asyncpg/psycopg2 (20MB) - Not using PostgreSQL
+# - aiosqlite (5MB) - Not using SQLite in production
+# - requests (5MB) - Using httpx instead
+
+# Total estimated memory: ~300-350MB
+# Buffer remaining: ~160-210MB (30-40%)
