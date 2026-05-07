@@ -276,6 +276,139 @@ Directive text:
     async def chat(self, messages: List[Dict[str, str]], temperature: float = 0.7) -> str:
         """General chat interface"""
         return await self._call_with_fallback(messages, temperature=temperature)
+    
+    async def answer_question(
+        self,
+        question: str,
+        context: str = "",
+        conversation_history: Optional[List[Dict[str, str]]] = None
+    ) -> str:
+        """
+        Answer a question with optional context and conversation history
+        
+        Args:
+            question: User's question
+            context: Optional context information
+            conversation_history: Optional conversation history
+            
+        Returns:
+            AI response
+        """
+        messages = [
+            {
+                "role": "system",
+                "content": "You are CourtPilot AI, a helpful legal assistant for government officials. You help with court judgments, directives, compliance, and legal queries. Provide clear, accurate, and actionable responses."
+            }
+        ]
+        
+        # Add conversation history if provided
+        if conversation_history:
+            messages.extend(conversation_history[-5:])  # Last 5 messages for context
+        
+        # Add context if provided
+        if context:
+            messages.append({
+                "role": "system",
+                "content": f"Context information:\n{context}"
+            })
+        
+        # Add user question
+        messages.append({
+            "role": "user",
+            "content": question
+        })
+        
+        return await self._call_with_fallback(messages, temperature=0.7, max_tokens=2000)
+    
+    async def summarize_judgment(
+        self,
+        judgment_text: str,
+        case_info: Dict[str, Any]
+    ) -> str:
+        """
+        Generate a summary of a judgment
+        
+        Args:
+            judgment_text: Full judgment text
+            case_info: Case information (case_id, court_name, etc.)
+            
+        Returns:
+            Summary text
+        """
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a legal AI assistant. Summarize court judgments concisely, highlighting key facts, legal issues, decisions, and directives."
+            },
+            {
+                "role": "user",
+                "content": f"""Summarize this court judgment in 3-4 paragraphs:
+
+Case: {case_info.get('case_id', 'Unknown')}
+Court: {case_info.get('court_name', 'Unknown')}
+Date: {case_info.get('judgment_date', 'Unknown')}
+
+Include:
+1. Key facts and parties involved
+2. Main legal issues
+3. Court's decision and reasoning
+4. Important directives/orders
+
+Judgment text:
+{judgment_text[:5000]}"""
+            }
+        ]
+        
+        return await self._call_with_fallback(messages, temperature=0.5, max_tokens=1500)
+    
+    async def assign_department(
+        self,
+        directive_data: Dict[str, Any],
+        department_mapping: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Assign department to a directive
+        
+        Args:
+            directive_data: Directive information
+            department_mapping: Available departments
+            
+        Returns:
+            Assignment with department and confidence
+        """
+        directive_text = directive_data.get('text', directive_data.get('directive_text', ''))
+        
+        # Simple keyword-based assignment (fast, no LLM needed)
+        department_keywords = {
+            'Legal': ['legal', 'law', 'court', 'advocate', 'counsel', 'litigation'],
+            'Finance': ['finance', 'payment', 'fund', 'budget', 'money', 'cost', 'salary', 'pension'],
+            'HR': ['employee', 'staff', 'personnel', 'recruitment', 'appointment', 'promotion'],
+            'Administration': ['admin', 'office', 'record', 'file', 'document', 'report'],
+            'IT': ['computer', 'software', 'system', 'digital', 'online', 'website'],
+            'Operations': ['operation', 'service', 'facility', 'maintenance', 'infrastructure']
+        }
+        
+        text_lower = directive_text.lower()
+        scores = {}
+        
+        for dept, keywords in department_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in text_lower)
+            if score > 0:
+                scores[dept] = score
+        
+        # Get department with highest score
+        if scores:
+            assigned_dept = max(scores, key=scores.get)
+            confidence = min(scores[assigned_dept] * 0.2, 0.9)  # Cap at 0.9
+        else:
+            assigned_dept = 'Administration'  # Default
+            confidence = 0.5
+        
+        return {
+            'department': assigned_dept,
+            'confidence': confidence,
+            'reasoning': f'Assigned based on keyword analysis'
+        }
 
 
 # Global instance

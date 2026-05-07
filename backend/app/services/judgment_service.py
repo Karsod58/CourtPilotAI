@@ -30,7 +30,8 @@ class JudgmentService:
         db: AsyncSession,
         file_path: str,
         case_data: Dict[str, Any],
-        uploaded_by: str
+        uploaded_by: str,
+        allow_duplicate: bool = False
     ) -> Judgment:
         """
         Upload and register a new judgment
@@ -40,6 +41,7 @@ class JudgmentService:
             file_path: Path to uploaded PDF
             case_data: Case metadata
             uploaded_by: User ID who uploaded
+            allow_duplicate: If True, allow uploading duplicate files (will reprocess)
         
         Returns:
             Created Judgment object
@@ -49,6 +51,18 @@ class JudgmentService:
             
             # Extract PDF metadata and text for case ID extraction
             pdf_metadata = pdf_processor.get_pdf_metadata(file_path)
+            
+            # Check for duplicate file
+            if not allow_duplicate:
+                result = await db.execute(
+                    select(Judgment).where(Judgment.document_hash == pdf_metadata['file_hash'])
+                )
+                existing_judgment = result.scalar_one_or_none()
+                
+                if existing_judgment:
+                    logger.warning(f"Duplicate file detected: {existing_judgment.case_id} (ID: {existing_judgment.id})")
+                    # Return existing judgment instead of creating new one
+                    return existing_judgment
             
             # Try to extract case information from PDF if not provided
             extracted_info = {}
@@ -141,124 +155,131 @@ class JudgmentService:
         """
         # Acquire semaphore to limit concurrent processing
         async with _pdf_processing_semaphore:
+            active_count = MAX_CONCURRENT_PDF_PROCESSING - _pdf_processing_semaphore._value
+            logger.info(f"Processing judgment: {judgment_id} (active: {active_count}/{MAX_CONCURRENT_PDF_PROCESSING})")
+            
             try:
-                active_count = MAX_CONCURRENT_PDF_PROCESSING - _pdf_processing_semaphore._value
-                logger.info(f"Processing judgment: {judgment_id} (active: {active_count}/{MAX_CONCURRENT_PDF_PROCESSING})")
-            
-            # Get judgment
-            result = await db.execute(
-                select(Judgment).where(Judgment.id == judgment_id)
-            )
-            judgment = result.scalar_one_or_none()
-            
-            if not judgment:
-                raise ValueError(f"Judgment not found: {judgment_id}")
-            
-            # Update status to processing
-            judgment.status = ProcessingStatus.PROCESSING
-            await db.commit()
-            
-            # Step 1: PDF Processing and OCR (NOW ASYNC)
-            logger.info("Step 1: PDF Processing")
-            pdf_data = await pdf_processor.process_pdf(judgment.document_path)
-            
-            if pdf_data['processing_status'] != 'success':
-                judgment.status = ProcessingStatus.FAILED
+                # Get judgment
+                result = await db.execute(
+                    select(Judgment).where(Judgment.id == judgment_id)
+                )
+                judgment = result.scalar_one_or_none()
+                
+                if not judgment:
+                    raise ValueError(f"Judgment not found: {judgment_id}")
+                
+                # Update status to processing
+                judgment.status = ProcessingStatus.PROCESSING
                 await db.commit()
-                raise Exception(f"PDF processing failed: {pdf_data.get('error')}")
-            
-            # Save extracted text
-            judgment.raw_text = pdf_data['full_text']
-            await db.commit()
-            
-            # Step 2: AI Directive Extraction
-            logger.info("Step 2: Directive Extraction")
-            case_context = {
-                'case_id': judgment.case_id,
-                'court_name': judgment.court_name,
-                'judgment_date': judgment.judgment_date.isoformat() if judgment.judgment_date else None,
-                'case_type': judgment.case_type.value
-            }
-            
-            directives_data = await llm_service.extract_directives(
-                pdf_data['full_text'],
-                case_context
-            )
-            
-            # Step 3: Department Assignment
-            logger.info("Step 3: Department Assignment")
-            department_mapping = self._load_department_mapping()
-            
-            directives = []
-            for directive_data in directives_data:
-                # Assign department
-                assignment = await llm_service.assign_department(
-                    directive_data,
-                    department_mapping
+                
+                # Step 1: PDF Processing and OCR (NOW ASYNC)
+                logger.info("Step 1: PDF Processing")
+                pdf_data = await pdf_processor.process_pdf(judgment.document_path)
+                
+                if pdf_data['processing_status'] != 'success':
+                    judgment.status = ProcessingStatus.FAILED
+                    await db.commit()
+                    raise Exception(f"PDF processing failed: {pdf_data.get('error')}")
+                
+                # Save extracted text
+                judgment.raw_text = pdf_data['full_text']
+                await db.commit()
+                
+                # Step 2: AI Directive Extraction
+                logger.info("Step 2: Directive Extraction")
+                case_context = {
+                    'case_id': judgment.case_id,
+                    'court_name': judgment.court_name,
+                    'judgment_date': judgment.judgment_date.isoformat() if judgment.judgment_date else None,
+                    'case_type': judgment.case_type.value
+                }
+                
+                directives_data = await llm_service.extract_directives(
+                    pdf_data['full_text'],
+                    case_context
                 )
                 
-                # Create directive record
-                directive = Directive(
-                    id=str(uuid.uuid4()),
-                    judgment_id=judgment.id,
-                    directive_text=directive_data['directive_text'],
-                    directive_type=directive_data['directive_type'],
-                    priority=directive_data['priority'],
-                    confidence_score=directive_data['confidence_score'],
-                    source_page_number=directive_data.get('source_page_number'),
-                    source_text_highlight=directive_data.get('source_text_highlight'),
-                    action_required=directive_data.get('action_required'),
-                    responsible_entity=directive_data.get('responsible_entity'),
-                    deadline_text=directive_data.get('deadline_text'),
-                    assigned_department=assignment.get('assigned_department'),
-                    assignment_confidence=assignment.get('confidence_score'),
-                    metadata={
-                        'assignment_reasoning': assignment.get('reasoning')
-                    }
-                )
+                # Step 3: Department Assignment
+                logger.info("Step 3: Department Assignment")
+                department_mapping = self._load_department_mapping()
                 
-                # Parse deadline if present
-                if directive_data.get('deadline'):
-                    try:
-                        directive.deadline = datetime.fromisoformat(directive_data['deadline'])
-                    except:
-                        pass
+                directives = []
+                for directive_data in directives_data:
+                    # Assign department
+                    assignment = await llm_service.assign_department(
+                        directive_data,
+                        department_mapping
+                    )
+                    
+                    # Create directive record
+                    directive = Directive(
+                        id=str(uuid.uuid4()),
+                        judgment_id=judgment.id,
+                        directive_text=directive_data['directive_text'],
+                        directive_type=directive_data['directive_type'],
+                        priority=directive_data['priority'],
+                        confidence_score=directive_data['confidence_score'],
+                        source_page_number=directive_data.get('source_page_number'),
+                        source_text_highlight=directive_data.get('source_text_highlight'),
+                        action_required=directive_data.get('action_required'),
+                        responsible_entity=directive_data.get('responsible_entity'),
+                        deadline_text=directive_data.get('deadline_text'),
+                        assigned_department=assignment.get('assigned_department'),
+                        assignment_confidence=assignment.get('confidence_score'),
+                        metadata={
+                            'assignment_reasoning': assignment.get('reasoning')
+                        }
+                    )
+                    
+                    # Parse deadline if present
+                    if directive_data.get('deadline'):
+                        try:
+                            directive.deadline = datetime.fromisoformat(directive_data['deadline'])
+                        except:
+                            pass
+                    
+                    directives.append(directive)
+                    db.add(directive)
                 
-                directives.append(directive)
-                db.add(directive)
-            
-            # Update judgment status
-            judgment.status = ProcessingStatus.EXTRACTED
-            judgment.processed_at = datetime.utcnow()
-            
-            # Extract departments involved
-            departments = list(set([
-                d.assigned_department for d in directives 
-                if d.assigned_department
-            ]))
-            judgment.departments_involved = departments
-            
-            await db.commit()
-            
-            logger.info(f"Judgment processed successfully: {len(directives)} directives extracted")
-            
-            return {
-                'judgment_id': judgment.id,
-                'status': 'success',
-                'directives_count': len(directives),
-                'departments_involved': departments,
-                'low_confidence_count': sum(1 for d in directives if d.confidence_score < settings.LOW_CONFIDENCE_THRESHOLD)
-            }
-            
-        except Exception as e:
-            logger.error(f"Error processing judgment: {e}")
-            
-            # Update status to failed
-            if judgment:
-                judgment.status = ProcessingStatus.FAILED
+                # Update judgment status
+                judgment.status = ProcessingStatus.EXTRACTED
+                judgment.processed_at = datetime.utcnow()
+                
+                # Extract departments involved
+                departments = list(set([
+                    d.assigned_department for d in directives 
+                    if d.assigned_department
+                ]))
+                judgment.departments_involved = departments
+                
                 await db.commit()
-            
-            raise
+                
+                logger.info(f"Judgment processed successfully: {len(directives)} directives extracted")
+                
+                return {
+                    'judgment_id': judgment.id,
+                    'status': 'success',
+                    'directives_count': len(directives),
+                    'departments_involved': departments,
+                    'low_confidence_count': sum(1 for d in directives if d.confidence_score < settings.LOW_CONFIDENCE_THRESHOLD)
+                }
+                
+            except Exception as e:
+                logger.error(f"Error processing judgment: {e}")
+                
+                # Update status to failed
+                try:
+                    result = await db.execute(
+                        select(Judgment).where(Judgment.id == judgment_id)
+                    )
+                    judgment = result.scalar_one_or_none()
+                    if judgment:
+                        judgment.status = ProcessingStatus.FAILED
+                        await db.commit()
+                except:
+                    pass
+                
+                raise
     
     async def get_judgment(
         self,

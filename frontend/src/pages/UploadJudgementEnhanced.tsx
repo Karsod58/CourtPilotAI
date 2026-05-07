@@ -257,6 +257,7 @@ const UploadJudgementEnhanced = () => {
       
       // Handle specific error types
       let errorMessage = "Failed to upload judgment. Please try again.";
+      let isDuplicate = false;
       
       if (error.message) {
         // Check for duplicate file error (409 Conflict)
@@ -264,7 +265,26 @@ const UploadJudgementEnhanced = () => {
             error.message.includes("Duplicate") ||
             error.message.includes("document_hash") ||
             error.message.toLowerCase().includes("conflict")) {
-          errorMessage = "⚠️ This PDF file has already been uploaded. Please select a different file or check your existing judgments in the Cases page.";
+          isDuplicate = true;
+          errorMessage = "⚠️ This PDF file has already been uploaded. The existing case will be processed instead.";
+          
+          // If we have the judgment ID from the error, navigate to processing
+          // Otherwise, show message to check Cases page
+          if (error.judgment_id) {
+            localStorage.setItem("currentJudgmentId", error.judgment_id);
+            localStorage.setItem("uploadedFile", fileName);
+            
+            setTimeout(() => {
+              navigate("/processing", {
+                state: {
+                  judgmentId: error.judgment_id,
+                  fileName: fileName
+                }
+              });
+            }, 1500);
+          } else {
+            errorMessage += " Please check the Cases page to view and process existing judgments.";
+          }
         } else if (error.message.includes("409")) {
           errorMessage = "⚠️ This file already exists in the system. Please check the Cases page to view existing judgments.";
         } else {
@@ -273,8 +293,11 @@ const UploadJudgementEnhanced = () => {
       }
       
       setErrors({ upload: errorMessage });
-      setProcessing(false);
-      setUploadProgress(0);
+      
+      if (!isDuplicate) {
+        setProcessing(false);
+        setUploadProgress(0);
+      }
     }
   };
 

@@ -166,6 +166,7 @@ async def upload_judgment(
     petitioner: Optional[str] = Form(None),
     respondent: Optional[str] = Form(None),
     auto_extract: bool = Form(True),
+    allow_duplicate: bool = Form(False),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -180,6 +181,7 @@ async def upload_judgment(
     - **petitioner**: Petitioner name (optional)
     - **respondent**: Respondent name (optional)
     - **auto_extract**: Auto-extract missing fields from PDF (default: True)
+    - **allow_duplicate**: Allow uploading duplicate files (will reprocess) (default: False)
     """
     try:
         # Validate file type
@@ -221,12 +223,13 @@ async def upload_judgment(
             from datetime import datetime
             case_data['judgment_date'] = datetime.fromisoformat(judgment_date)
         
-        # Upload judgment
+        # Upload judgment (with duplicate handling)
         judgment = await judgment_service.upload_judgment(
             db=db,
             file_path=str(file_path),
             case_data=case_data,
-            uploaded_by="system"  # TODO: Get from auth
+            uploaded_by="system",  # TODO: Get from auth
+            allow_duplicate=allow_duplicate
         )
         
         # Trigger background processing
@@ -242,14 +245,6 @@ async def upload_judgment(
         raise
     except Exception as e:
         logger.error(f"Error uploading judgment: {e}")
-        
-        # Check if it's a duplicate file error
-        if "Duplicate entry" in str(e) and "document_hash" in str(e):
-            raise HTTPException(
-                status_code=409, 
-                detail="This PDF file has already been uploaded. Please upload a different file or check existing judgments."
-            )
-        
         raise HTTPException(status_code=500, detail=str(e))
 
 
