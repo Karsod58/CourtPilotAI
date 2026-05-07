@@ -6,11 +6,13 @@ import {
   Upload,
   FileText,
   X,
-  AlertCircle
+  AlertCircle,
+  Zap,
+  Clock
 } from "lucide-react";
 import "../styles/dashboard.css";
 import AppLayout from "../components/layout/AppLayout";
-import { apiService } from "../services/apiService";
+import { apiService, type Judgment } from "../services/apiService";
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -37,6 +39,52 @@ const UploadJudgement = () => {
   const [extracting, setExtracting] = useState(false);
   const [extractedInfo, setExtractedInfo] = useState<any>(null);
   const [showExtracted, setShowExtracted] = useState(false);
+  const [recentUploads, setRecentUploads] = useState<Judgment[]>([]);
+  const [processingUpload, setProcessingUpload] = useState<string | null>(null);
+
+  // Load recent uploads on component mount
+  useState(() => {
+    loadRecentUploads();
+  });
+
+  const loadRecentUploads = async () => {
+    try {
+      const response = await apiService.getJudgments(1, 5);
+      setRecentUploads(response.items);
+    } catch (error) {
+      console.error('Error loading recent uploads:', error);
+    }
+  };
+
+  const handleProcessUpload = async (judgmentId: string) => {
+    try {
+      setProcessingUpload(judgmentId);
+      await apiService.processJudgment(judgmentId);
+      // Reload recent uploads to update status
+      await loadRecentUploads();
+      // Navigate to processing page
+      navigate("/processing", { 
+        state: { 
+          judgmentId: judgmentId
+        } 
+      });
+    } catch (error) {
+      console.error('Error processing judgment:', error);
+      alert('Failed to start processing. Please try again.');
+    } finally {
+      setProcessingUpload(null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -582,18 +630,51 @@ const UploadJudgement = () => {
               <div className="recent-upload-mini">
                 <div className="recent-header">
                   <h4>Recent Uploads</h4>
-                  <span>Last 24 hrs</span>
+                  <span>Last 5 uploads</span>
                 </div>
 
-                <div className="recent-row">
-                  <span>HC_2024_1456.pdf</span>
-                  <b>Processed</b>
-                </div>
-
-                <div className="recent-row">
-                  <span>Judgment_ABC_vs_State.pdf</span>
-                  <b>Processed</b>
-                </div>
+                {recentUploads.length === 0 ? (
+                  <div className="recent-row" style={{ justifyContent: 'center', color: '#6b7280' }}>
+                    <span>No recent uploads</span>
+                  </div>
+                ) : (
+                  recentUploads.map((upload) => (
+                    <div className="recent-row" key={upload.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontWeight: 500 }}>{upload.case_id}</span>
+                        <small style={{ display: 'block', color: '#6b7280', fontSize: '0.75rem' }}>
+                          <Clock size={10} style={{ display: 'inline', marginRight: '4px' }} />
+                          {formatDate(upload.uploaded_at)}
+                        </small>
+                      </div>
+                      {upload.status === 'uploaded' ? (
+                        <button
+                          onClick={() => handleProcessUpload(upload.id)}
+                          disabled={processingUpload === upload.id}
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            background: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                        >
+                          <Zap size={12} />
+                          {processingUpload === upload.id ? 'Processing...' : 'Process'}
+                        </button>
+                      ) : (
+                        <b className={`status-badge ${upload.status.replace("_", "-").toLowerCase()}`}>
+                          {upload.status.replace("_", " ")}
+                        </b>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

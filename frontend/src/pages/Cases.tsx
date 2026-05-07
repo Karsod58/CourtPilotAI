@@ -11,6 +11,7 @@ import {
   User,
   AlertCircle,
   MessageCircle,
+  Zap,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import "../styles/dashboard.css";
@@ -26,6 +27,7 @@ const Cases = () => {
   const [selectedCase, setSelectedCase] = useState<Judgment | null>(null);
   const [caseActions, setCaseActions] = useState<any[]>([]);
   const [downloading, setDownloading] = useState(false);
+  const [processingCase, setProcessingCase] = useState<string | null>(null);
 
   useEffect(() => {
     loadCases();
@@ -112,6 +114,23 @@ const Cases = () => {
       alert('Failed to download PDF. The file may not be available.');
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleProcessCase = async (case_: Judgment) => {
+    try {
+      setProcessingCase(case_.id);
+      await apiService.processJudgment(case_.id);
+      
+      // Store judgment ID and navigate to processing page
+      localStorage.setItem("currentJudgmentId", case_.id);
+      window.location.href = `/processing?id=${case_.id}`;
+    } catch (err) {
+      console.error('Error processing case:', err);
+      alert('Failed to start processing. Please try again.');
+      setProcessingCase(null);
+      // Reload cases to update status
+      loadCases();
     }
   };
 
@@ -218,10 +237,33 @@ const Cases = () => {
                 </td>
                 <td>{case_.page_count || 0}</td>
                 <td>
-                  <button className="view-btn" onClick={() => handleViewActions(case_)}>
-                    <FileText size={14} />
-                    View
-                  </button>
+                  {case_.status === 'uploaded' ? (
+                    <button 
+                      className="process-btn" 
+                      onClick={() => handleProcessCase(case_)}
+                      disabled={processingCase === case_.id}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      <Zap size={14} />
+                      {processingCase === case_.id ? 'Processing...' : 'Process'}
+                    </button>
+                  ) : (
+                    <button className="view-btn" onClick={() => handleViewActions(case_)}>
+                      <FileText size={14} />
+                      View
+                    </button>
+                  )}
                 </td>
               </tr>
             )))}

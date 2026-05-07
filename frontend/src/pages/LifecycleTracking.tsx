@@ -264,21 +264,48 @@ const LifecycleTracking = () => {
     return (
       <AppLayout activeSidebarItem="lifecycle" showSearch={false} showUpload={false} pageTitle="Lifecycle Tracking">
         <div className="loading-state" style={{ textAlign: 'center', padding: '4rem' }}>
-          <Loader2 size={48} className="spin-icon" style={{ margin: '0 auto 1rem' }} />
+          <Loader2 size={48} className="spin-icon" style={{ margin: '0 auto 1rem', animation: 'spin 1s linear infinite' }} />
           <p>Loading lifecycle data...</p>
         </div>
       </AppLayout>
     );
   }
 
-  if (error && lifecycleSteps.length === 0) {
+  if (error) {
     return (
       <AppLayout activeSidebarItem="lifecycle" showSearch={false} showUpload={false} pageTitle="Lifecycle Tracking">
         <div className="error-state" style={{ textAlign: 'center', padding: '4rem' }}>
           <AlertTriangle size={48} style={{ margin: '0 auto 1rem', color: '#ef4444' }} />
-          <h3>Error Loading Lifecycle</h3>
+          <h3>Unable to Load Lifecycle</h3>
           <p>{error}</p>
-          <button onClick={loadLifecycleData} style={{ marginTop: '1rem' }}>Retry</button>
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <button 
+              onClick={loadLifecycleData} 
+              style={{ 
+                padding: '0.75rem 1.5rem', 
+                background: '#3b82f6', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '0.5rem',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+            <button 
+              onClick={() => window.location.href = '/cases'} 
+              style={{ 
+                padding: '0.75rem 1.5rem', 
+                background: '#6b7280', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '0.5rem',
+                cursor: 'pointer'
+              }}
+            >
+              Back to Cases
+            </button>
+          </div>
         </div>
       </AppLayout>
     );
