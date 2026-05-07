@@ -5,8 +5,12 @@ Handles interactions with Ollama, OpenAI, and Anthropic APIs
 from typing import List, Dict, Any, Optional
 from loguru import logger
 import json
+import asyncio
 
 from app.core.config import settings
+
+# Import mock LLM for fallback
+from app.services.ai.mock_llm import mock_llm_service
 
 # Try to import native Ollama client (preferred for cloud API)
 try:
@@ -357,6 +361,7 @@ Extract all directives in JSON format with the following structure:
     async def extract_directives(self, text: str, case_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Extract directives from judgment text using LLM with chunking
+        Includes timeout and fallback to mock for demo
         
         Args:
             text: Full judgment text
@@ -368,38 +373,64 @@ Extract all directives in JSON format with the following structure:
         try:
             logger.info(f"Extracting directives from text of length {len(text)}")
             
-            # If text is small enough, process directly
-            if len(text) <= 25000:
-                logger.info("Text fits in single chunk, processing directly")
-                return await self._extract_directives_from_chunk(text, case_context)
+            # Use mock service if configured or if LLM is not available
+            if settings.LLM_PROVIDER == "mock" or not self.llm:
+                logger.info("Using mock LLM service for directive extraction")
+                return await mock_llm_service.extract_directives(text, case_context)
             
-            # Otherwise, chunk the text
-            logger.info("Text too large, chunking for processing")
-            chunks = self._chunk_text(text, max_chars=25000)
-            logger.info(f"Split text into {len(chunks)} chunks")
-            
-            all_directives = []
-            for i, chunk in enumerate(chunks, 1):
-                logger.info(f"Processing chunk {i}/{len(chunks)} ({len(chunk)} chars)")
-                try:
-                    directives = await self._extract_directives_from_chunk(chunk, case_context)
-                    all_directives.extend(directives)
-                    logger.info(f"Extracted {len(directives)} directives from chunk {i}")
-                except Exception as e:
-                    logger.error(f"Error processing chunk {i}: {e}")
-                    # Continue with other chunks
-                    continue
-            
-            logger.info(f"Total directives extracted: {len(all_directives)}")
-            return all_directives
+            # Try real LLM with timeout
+            try:
+                # Set timeout to 30 seconds
+                result = await asyncio.wait_for(
+                    self._extract_directives_real(text, case_context),
+                    timeout=30.0
+                )
+                return result
+            except asyncio.TimeoutError:
+                logger.warning("LLM extraction timed out after 30s, falling back to mock")
+                return await mock_llm_service.extract_directives(text, case_context)
+            except Exception as e:
+                logger.error(f"LLM extraction failed: {e}, falling back to mock")
+                return await mock_llm_service.extract_directives(text, case_context)
             
         except Exception as e:
             logger.error(f"Error extracting directives: {e}")
-            raise
+            # Final fallback to mock
+            return await mock_llm_service.extract_directives(text, case_context)
+    
+    async def _extract_directives_real(self, text: str, case_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Real LLM extraction (original logic)
+        """
+        # If text is small enough, process directly
+        if len(text) <= 25000:
+            logger.info("Text fits in single chunk, processing directly")
+            return await self._extract_directives_from_chunk(text, case_context)
+        
+        # Otherwise, chunk the text
+        logger.info("Text too large, chunking for processing")
+        chunks = self._chunk_text(text, max_chars=25000)
+        logger.info(f"Split text into {len(chunks)} chunks")
+        
+        all_directives = []
+        for i, chunk in enumerate(chunks, 1):
+            logger.info(f"Processing chunk {i}/{len(chunks)} ({len(chunk)} chars)")
+            try:
+                directives = await self._extract_directives_from_chunk(chunk, case_context)
+                all_directives.extend(directives)
+                logger.info(f"Extracted {len(directives)} directives from chunk {i}")
+            except Exception as e:
+                logger.error(f"Error processing chunk {i}: {e}")
+                # Continue with other chunks
+                continue
+        
+        logger.info(f"Total directives extracted: {len(all_directives)}")
+        return all_directives
     
     async def assign_department(self, directive: Dict[str, Any], department_mapping: Dict[str, Any]) -> Dict[str, Any]:
         """
         Assign responsible department to a directive using LLM
+        Includes timeout and fallback to mock for demo
         
         Args:
             directive: Directive information
@@ -407,6 +438,38 @@ Extract all directives in JSON format with the following structure:
         
         Returns:
             Department assignment with confidence score
+        """
+        try:
+            logger.info(f"Assigning department for directive")
+            
+            # Use mock service if configured or if LLM is not available
+            if settings.LLM_PROVIDER == "mock" or not self.llm:
+                logger.info("Using mock LLM service for department assignment")
+                return await mock_llm_service.assign_department(directive, department_mapping)
+            
+            # Try real LLM with timeout
+            try:
+                # Set timeout to 20 seconds
+                result = await asyncio.wait_for(
+                    self._assign_department_real(directive, department_mapping),
+                    timeout=20.0
+                )
+                return result
+            except asyncio.TimeoutError:
+                logger.warning("Department assignment timed out after 20s, falling back to mock")
+                return await mock_llm_service.assign_department(directive, department_mapping)
+            except Exception as e:
+                logger.error(f"Department assignment failed: {e}, falling back to mock")
+                return await mock_llm_service.assign_department(directive, department_mapping)
+            
+        except Exception as e:
+            logger.error(f"Error assigning department: {e}")
+            # Final fallback to mock
+            return await mock_llm_service.assign_department(directive, department_mapping)
+    
+    async def _assign_department_real(self, directive: Dict[str, Any], department_mapping: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Real LLM department assignment (original logic)
         """
         system_prompt = """You are an expert in Indian government structure and department responsibilities.
 Your task is to assign the most appropriate government department to handle a court directive.
@@ -445,29 +508,24 @@ Return JSON:
   "reasoning": "brief explanation"
 }}"""
 
-        try:
-            messages = [
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': user_prompt}
-            ]
-            
-            response = await self.chat(messages)
-            content = response
-            
-            # Extract JSON
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-            
-            assignment = json.loads(content)
-            
-            logger.info(f"Assigned department: {assignment.get('assigned_department')} with confidence {assignment.get('confidence_score')}")
-            return assignment
-            
-        except Exception as e:
-            logger.error(f"Error assigning department: {e}")
-            raise
+        messages = [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt}
+        ]
+        
+        response = await self.chat(messages)
+        content = response
+        
+        # Extract JSON
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        
+        assignment = json.loads(content)
+        
+        logger.info(f"Assigned department: {assignment.get('assigned_department')} with confidence {assignment.get('confidence_score')}")
+        return assignment
     
     async def answer_question(
         self,
@@ -477,6 +535,7 @@ Return JSON:
     ) -> str:
         """
         Answer questions about judgments and documents
+        Includes timeout and fallback to mock for demo
         
         Args:
             question: User's question
@@ -485,6 +544,39 @@ Return JSON:
         
         Returns:
             Answer to the question
+        """
+        try:
+            # Use mock service if configured or if LLM is not available
+            if settings.LLM_PROVIDER == "mock" or not self.llm:
+                logger.info("Using mock LLM service for question answering")
+                return await mock_llm_service.answer_question(question, context, conversation_history)
+            
+            # Try real LLM with timeout
+            try:
+                result = await asyncio.wait_for(
+                    self._answer_question_real(question, context, conversation_history),
+                    timeout=30.0
+                )
+                return result
+            except asyncio.TimeoutError:
+                logger.warning("Question answering timed out after 30s, falling back to mock")
+                return await mock_llm_service.answer_question(question, context, conversation_history)
+            except Exception as e:
+                logger.error(f"Question answering failed: {e}, falling back to mock")
+                return await mock_llm_service.answer_question(question, context, conversation_history)
+            
+        except Exception as e:
+            logger.error(f"Error answering question: {e}")
+            return "I apologize, but I'm unable to answer that question at the moment. Please try again later."
+    
+    async def _answer_question_real(
+        self,
+        question: str,
+        context: str,
+        conversation_history: Optional[List[Dict[str, str]]] = None
+    ) -> str:
+        """
+        Real LLM question answering (original logic)
         """
         system_prompt = """You are a helpful legal assistant for government officials working with court judgments.
 Your role is to answer questions about court orders, directives, and compliance requirements.
@@ -517,16 +609,13 @@ Please answer the question based on the context provided."""
 
         messages.append({'role': 'user', 'content': user_message})
         
-        try:
-            response = await self.chat(messages, system_prompt)
-            return response
-        except Exception as e:
-            logger.error(f"Error answering question: {e}")
-            raise
+        response = await self.chat(messages, system_prompt)
+        return response
     
     async def summarize_judgment(self, judgment_text: str, case_info: Dict[str, Any]) -> str:
         """
         Generate a concise summary of a judgment
+        Includes timeout and fallback to mock for demo
         
         Args:
             judgment_text: Full judgment text
@@ -534,6 +623,34 @@ Please answer the question based on the context provided."""
         
         Returns:
             Summary text
+        """
+        try:
+            # Use mock service if configured or if LLM is not available
+            if settings.LLM_PROVIDER == "mock" or not self.llm:
+                logger.info("Using mock LLM service for judgment summarization")
+                return await mock_llm_service.summarize_judgment(judgment_text, 500)
+            
+            # Try real LLM with timeout
+            try:
+                result = await asyncio.wait_for(
+                    self._summarize_judgment_real(judgment_text, case_info),
+                    timeout=30.0
+                )
+                return result
+            except asyncio.TimeoutError:
+                logger.warning("Judgment summarization timed out after 30s, falling back to mock")
+                return await mock_llm_service.summarize_judgment(judgment_text, 500)
+            except Exception as e:
+                logger.error(f"Judgment summarization failed: {e}, falling back to mock")
+                return await mock_llm_service.summarize_judgment(judgment_text, 500)
+            
+        except Exception as e:
+            logger.error(f"Error summarizing judgment: {e}")
+            return "Unable to generate summary at this time."
+    
+    async def _summarize_judgment_real(self, judgment_text: str, case_info: Dict[str, Any]) -> str:
+        """
+        Real LLM judgment summarization (original logic)
         """
         system_prompt = """You are a legal expert creating concise summaries of court judgments for government officials.
 Create a clear, structured summary that highlights:
@@ -554,18 +671,13 @@ JUDGMENT:
 
 Provide a structured summary in 200-300 words."""
 
-        try:
-            messages = [
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': user_prompt}
-            ]
-            
-            response = await self.chat(messages)
-            return response
-            
-        except Exception as e:
-            logger.error(f"Error summarizing judgment: {e}")
-            raise
+        messages = [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt}
+        ]
+        
+        response = await self.chat(messages)
+        return response
     
     async def generate_action_plan(self, directives: List[Dict[str, Any]], judgment_context: Dict[str, Any]) -> Dict[str, Any]:
         """
