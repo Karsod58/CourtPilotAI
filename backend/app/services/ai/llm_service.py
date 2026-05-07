@@ -88,8 +88,12 @@ class LLMService:
                 raise ValueError(f"Unsupported LLM provider: {self.provider}")
             
             # Always try to initialize Ollama as fallback (if not primary)
+            # OR initialize Groq fallback if Ollama is primary
             if self.provider != "ollama":
                 self._init_ollama_fallback()
+            else:
+                # If Ollama is primary, try to initialize Groq as fallback
+                self._init_groq_fallback()
                 
         except Exception as e:
             logger.error(f"Failed to initialize LLM service: {e}")
@@ -231,6 +235,37 @@ class LLMService:
                 logger.info(f"✓ Initialized Ollama fallback: {ollama_model} at {ollama_url}")
         except Exception as e:
             logger.warning(f"Ollama fallback initialization failed: {e}")
+            self.has_ollama_fallback = False
+    
+    def _init_groq_fallback(self):
+        """Initialize Groq as fallback when Ollama is primary"""
+        try:
+            # Check if Groq settings are available
+            groq_key = getattr(settings, 'OPENAI_API_KEY', None)
+            groq_url = getattr(settings, 'OLLAMA_FALLBACK_URL', None)
+            groq_model = getattr(settings, 'OLLAMA_FALLBACK_MODEL', None) or "llama-3.1-70b-versatile"
+            
+            if not groq_key:
+                logger.info("No Groq API key found, skipping Groq fallback")
+                return
+            
+            if not groq_url or "groq.com" not in groq_url:
+                logger.info("No Groq URL found, skipping Groq fallback")
+                return
+            
+            if OPENAI_AVAILABLE and LANGCHAIN_AVAILABLE:
+                groq_config = {
+                    "model": groq_model,
+                    "temperature": 0.1,
+                    "api_key": groq_key,
+                    "base_url": groq_url
+                }
+                
+                self.ollama_fallback = ChatOpenAI(**groq_config)
+                self.has_ollama_fallback = True
+                logger.info(f"✓ Initialized Groq fallback: {groq_model} at {groq_url}")
+        except Exception as e:
+            logger.warning(f"Groq fallback initialization failed: {e}")
             self.has_ollama_fallback = False
     
     async def chat(
