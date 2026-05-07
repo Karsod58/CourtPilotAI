@@ -73,10 +73,16 @@ class JudgmentService:
             
             # Validate required fields
             if not case_data.get('case_id'):
-                raise ValueError("Case ID is required and could not be extracted from document")
+                # Generate a temporary case ID if extraction failed
+                import datetime
+                timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                case_data['case_id'] = f"TEMP-{timestamp}"
+                logger.warning(f"Case ID not provided or extracted, using temporary ID: {case_data['case_id']}")
             
             if not case_data.get('court_name'):
-                raise ValueError("Court name is required and could not be extracted from document")
+                # Use a default court name if extraction failed
+                case_data['court_name'] = "Court Name Not Specified"
+                logger.warning("Court name not provided or extracted, using default")
             
             # Create judgment record
             judgment = Judgment(
