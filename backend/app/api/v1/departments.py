@@ -4,7 +4,7 @@ Manage departments and their performance metrics
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, or_
 from typing import List, Optional
 from datetime import datetime, timedelta
 from loguru import logger
