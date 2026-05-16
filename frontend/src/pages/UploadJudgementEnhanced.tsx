@@ -68,13 +68,13 @@ const UploadJudgementEnhanced = () => {
   const extractMetadata = async (file: File) => {
     setExtracting(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
       
       console.log('Calling preview endpoint...');
       const response = await fetch(`${API_BASE_URL}/judgments/preview`, {
         method: 'POST',
-        body: formData,
+        body: uploadFormData,
       });
       
       console.log('Preview response status:', response.status);
